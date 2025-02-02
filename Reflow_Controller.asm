@@ -77,6 +77,7 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
+blank: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -357,11 +358,11 @@ display_heating:
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
 	Set_Cursor(1,4)
-	Display_BCD(Soak_temp)
+	Display_BCD3(Soak_temp)
 	Set_Cursor(1,12)
-	Display_BCD(outside_temp)
+	Display_BCD3(outside_temp)
 	Set_Cursor(2,7)
-	Display_BCD(current_temp)
+	Display_BCD3(current_temp)
 	ret
 
 display_blank:
@@ -434,11 +435,12 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
+    clr blank
 	
 Forever:
-	
-	state_0: 
 	lcall display_blank
+
+	state_0:
 	mov a, STATE
         mov pwm, #0
 	cjne a, #0, state_1
@@ -449,10 +451,19 @@ Forever:
 	ljmp state_0
 
 	state_1: 
+	jb blank, heat
 	lcall display_blank
+	cpl blank
+heat:
+	mov a, STATE
+	cjne a, #1, state_2
 	lcall display_heating
 	mov pwm, #100
 	lcall outside_tmp
+	ljmp state_1
+
+	state_2:
+
 	ljmp Forever
 	
 END
