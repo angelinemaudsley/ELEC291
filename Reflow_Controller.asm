@@ -525,6 +525,7 @@ state_2:
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
 state_2_loop: 
+	ljmp state_2_loop
 	
 
 	ljmp Forever
