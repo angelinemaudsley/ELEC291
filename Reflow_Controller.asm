@@ -195,7 +195,7 @@ check_stemp:
 	add a, #0x01
 	da a
 	mov Soak_temp, a
-	cjne a, #0x250, check_rtime
+	cjne a, #250, check_rtime
 	mov a, #0x00
 	mov Soak_temp, a
 	ljmp check_rtime
@@ -205,7 +205,7 @@ Soak_temp_decrement:
 	add a, #0x99
 	da a
 	mov Soak_temp, a
-	cjne a, #0x250, check_rtime
+	cjne a, #250, check_rtime
 	mov a, #0x00
 	mov Soak_temp, a
 	ljmp check_rtime
@@ -233,7 +233,7 @@ check_rtemp:
 	add a, #0x01
 	da a
 	mov Reflow_temp, a
-	cjne a, #0x250, skipp
+	cjne a, #250, skipp
 	mov a, #0x00
 	mov Reflow_temp, a
 	ljmp skipp
@@ -243,7 +243,7 @@ Reflow_temp_decrement:
 	add a, #0x99
 	da a
 	mov Reflow_temp, a
-	cjne a, #0x250, skipp
+	cjne a, #250, skipp
 	mov a, #0x00
 	mov Reflow_temp, a
 	ljmp skipp
