@@ -26,6 +26,14 @@ TIMER0_RELOAD_1MS EQU (0x10000-(CLK/1000))
 TIMER2_RATE EQU 100 ; 100Hz or 10ms
 TIMER2_RELOAD EQU (65536-(CLK/(16*TIMER2_RATE))) ; Need to change timer 2 input divide to 16 in T2MOD
 
+ORG 0x0000
+	ljmp main
+org 0x0023
+	reti
+	; Timer/Counter 2 overflow interrupt vector
+org 0x002B
+	ljmp Timer2_ISR
+
 START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
@@ -77,20 +85,13 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
-blank: dbit 1
+blankk: dbit 1
 
 $NOLIST
 $include(math32.inc)
 $LIST
 
 CSEG
-ORG 0x0000
-	ljmp main
-org 0x0023
-	reti
-	; Timer/Counter 2 overflow interrupt vector
-org 0x002B
-	ljmp Timer2_ISR
 
 Init_All:
 	; Configure all the pins for biderectional I/O
@@ -160,8 +161,7 @@ waitms:
 	djnz R2, waitms
 	ret
 Timer2_ISR:
-	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is
-	bit addressable.
+	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is bit addressable.
 	push psw
 	push acc
 
@@ -333,7 +333,7 @@ Check_start:
 	jnb START_BUTTON, $		; Wait for button release.  The '$' means: jump to same instruction.
 	mov STATE, #0x01
 	ret
-sjmp:
+smjmp:
 ljmp skipp
 
 wait_for_ti:
@@ -435,7 +435,7 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
-    clr blank
+    clr blankk
 	
 Forever:
 	lcall display_blank
@@ -451,9 +451,9 @@ Forever:
 	ljmp state_0
 
 	state_1: 
-	jb blank, heat
+	jb blankk, heat
 	lcall display_blank
-	cpl blank
+	cpl blankk
 heat:
 	mov a, STATE
 	cjne a, #1, state_2
