@@ -53,13 +53,13 @@ LCD_D4 equ P0.0
 LCD_D5 equ P0.1
 LCD_D6 equ P0.2
 LCD_D7 equ P0.3
-ADC_pn equ P1.1
+;ADC_pn equ P1.1
 
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
-DSEG at 0x30
+DSEG at 30h
 STATE: ds 1
 Soak_time: ds 1
 Soak_temp: ds 1
@@ -72,6 +72,7 @@ pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
 pwm: ds 1 ; pwm percentage
 x: ds 4
 y: ds 4
+z: ds 4
 bcd: ds 5
 
 
@@ -305,7 +306,7 @@ check_rtemp:
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
-	da a
+	;da a
 	mov Reflow_temp, a
 	cjne a, #250, skipp
 	mov a, #0x00
@@ -347,17 +348,24 @@ display_menu:
 	Display_BCD3(Soak_temp)
 	Set_Cursor(2,9)
 	Display_BCD(Reflow_time)
-	Set_Cursor(2,13)
-	Display_BCD3(Reflow_temp)
-	ret
+	set_cursor(2,13)
+    ;mov a, Reflow_temp
+    ;lcall conv_to_bcd_high
+    ;mov a, Reflow_temp
+    ;lcall conv_to_bcd_low
+    ;lcall conv_to_bcd
+    ;set_cursor(2,13)
+    ;display_bcd(bcd+2)
+    display_bcd3(Reflow_temp)
+    ret
 
 display_heating:
 	Set_Cursor(1,4)
-	Display_BCD3(Soak_temp)
+	Display_BCD3(Soak_temp); change this one****
 	Set_Cursor(1,12)
 	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
-	Display_BCD3(current_temp)
+	Display_BCD3(current_temp); change this one****
 	ret
 
 display_blank:
@@ -372,11 +380,24 @@ Display_formated_BCD:
 	Display_BCD(bcd+2)
 	Display_char(#'.')
 	Display_BCD(bcd+1)
-	Display_BCD(bcd+0)
-	Set_Cursor(2, 10)
-	;Display_char(#'=')
 	ret
 
+conv_to_bcd_high:
+    swap a
+    anl a, #0x0f
+    mov R1, a
+ret
+conv_to_bcd_low:
+    anl a, #0x0f
+    mov R0, A
+ret
+conv_to_bcd:
+	mov x+0, R0
+	mov x+1, R1
+	mov x+2, #0
+	mov x+3, #0
+    lcall hex2bcd
+ret
 Outside_tmp:
     clr ADCF
     setb ADCS
@@ -431,7 +452,6 @@ main:
 	
 Forever:
 	lcall display_blank
-
 state_0:
 	Set_Cursor(1, 1)
 	Send_Constant_String(#soak_param)
@@ -459,7 +479,11 @@ state_1_loop:
 	lcall display_heating
 	mov pwm, #100
 	lcall outside_tmp
-	ljmp state_1_loop
+    mov R2, #250
+	lcall waitms
+	mov R2, #250
+	lcall waitms
+    ljmp state_1_loop
 
 	state_2:
 
