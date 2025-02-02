@@ -85,7 +85,6 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
-blankk: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -342,10 +341,6 @@ wait_for_ti:
     ret
 
 display_menu:
-	Set_Cursor(1, 1)
-	Send_Constant_String(#soak_param)
-	Set_Cursor(2, 1)
-	Send_Constant_String(#reflow_param)
 	Set_Cursor(1,7) 
 	Display_BCD(Soak_time)
 	Set_Cursor(1,11)
@@ -357,10 +352,6 @@ display_menu:
 	ret
 
 display_heating:
-	Set_Cursor(1, 1)
-	Send_Constant_String(#heating_to)
-	Set_Cursor(2, 1)
-	Send_Constant_String(#heating_temp)
 	Set_Cursor(1,4)
 	Display_BCD3(Soak_temp)
 	Set_Cursor(1,12)
@@ -437,12 +428,16 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
-    clr blankk
 	
 Forever:
 	lcall display_blank
 
-	state_0:
+state_0:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#soak_param)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#reflow_param)
+state_0_loop:
 	mov a, STATE
         mov pwm, #0
 	cjne a, #0, state_1
@@ -450,19 +445,21 @@ Forever:
 	lcall check_decrement
 	lcall display_menu
 	lcall Check_start
-	ljmp state_0
+	ljmp state_0_loop
 
-	state_1: 
-	jb blankk, heat
+state_1: 
 	lcall display_blank
-	setb blankk
-heat:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#heating_to)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#heating_temp)
+state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
 	lcall display_heating
 	mov pwm, #100
 	lcall outside_tmp
-	ljmp state_1
+	ljmp state_1_loop
 
 	state_2:
 
