@@ -32,9 +32,12 @@ START_BUTTON  equ
 ORG 0x0000
 	ljmp main
 
-;              1234567890123456    <- This helps determine the location of the counter
-title:     db 'Soak: xxs xxxC', 0
-blank:     db 'Reflow: xxs xxxC', 0
+;                1234567890123456    <- This helps determine the location of the counter
+soak_param: db  'Soak: xxs xxxC', 0
+reflow_param:db 'Reflow: xxs xxxC', 0
+heating_to:  db 'Ts:xxxC To:xxxC', 0
+heating_temp:db 'Temp: xxxC', 0
+
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -55,6 +58,8 @@ Soak_time: ds 1
 Soak_temp: ds 1
 Reflow_time: ds 1
 Reflow_temp: ds 1
+current_temp: ds 1
+outside_temp: ds 1
 
 BSEG
 ; These eight bit variables store the value of the pushbuttons after calling 'ADC_to_PB' below
@@ -308,8 +313,33 @@ Check_start:
 	jb  START_BUTTON, skip  ; if the 'CLEAR' button is not pressed skip
 	jnb START_BUTTON, $		; Wait for button release.  The '$' means: jump to same instruction.
 	mov STATE, #0x01
+	ret
 
 skip:
+	ret
+
+display_menu:
+	Set_Cursor(1,7) 
+	Display_BCD(Soak_time)
+	Set_Cursor((1,11)
+	Display_BCD(Soak_temp)
+	Set_Cursor(2,9)
+	Display_BCD(Reflow_time)
+	Set_Cursor(2,13)
+	Display_BCD(Reflow_temp)
+	ret
+
+display_heating:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#heating_to)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#heating_temp)
+	Set_Cursor(1,4)
+	Display_BCD(Soak_temp)
+	Set_Cursor(1,12)
+	Display_BCD(outside_temp)
+	Set_Cursor(2,7)
+	Display_BCD(current_temp)
 	ret
 	
 main:
@@ -319,14 +349,15 @@ main:
     
     ; initial messages in LCD
 	Set_Cursor(1, 1)
-    Send_Constant_String(#Title)
+    Send_Constant_String(#soak_param)
 	Set_Cursor(2, 1)
-    Send_Constant_String(#blank)
+    Send_Constant_String(#reflow_param)
     mov STATE, #0x00
     mov Soak_time, #0x00
     mov Soak_temp, #0x00
     mov Reflow_time, #0x00
     mov Reflow_temp, #0x00
+    mov current_temp, #0x00
     clr Decrement
 	
 Forever:
@@ -336,16 +367,12 @@ Forever:
 	state_0: 
 	cnje a, #0, state_1
 	lcall ADC_to_PB
-	Set_Cursor(1,7) 
-	Display_BCD(Soak_time)
-	Set_Cursor((1,11)
-	Display_BCD(Soak_temp)
-	Set_Cursor(2,9)
-	Display_BCD(Reflow_time)
-	Set_Cursor(2,13)
-	Display_BCD(Reflow_temp)
+	lcall display_menu
 	lcall Check_start
 	ljmp state_0
+
+	state_1: 
+	lcall display_heating
 
 
 	ljmp Forever
