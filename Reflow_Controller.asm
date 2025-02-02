@@ -227,7 +227,7 @@ Reflow_time_decrement:
 	ljmp check_rtemp
 
 check_rtemp:
-	jb PB4, skip
+	jb PB4, skipp
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
@@ -236,7 +236,7 @@ check_rtemp:
 	cjne a, #0x250, ADC_to_PB_L0
 	mov a, #0x00
 	mov Reflow_temp, a
-	ljmp skip
+	ljmp skipp
 
 Reflow_temp_decrement: 
 	mov a, Reflow_temp
@@ -246,16 +246,16 @@ Reflow_temp_decrement:
 	cjne a, #0x250, ADC_to_PB_L0
 	mov a, #0x00
 	mov Reflow_temp, a
-	ljmp skip
+	ljmp skipp
 
-skip:
+skipp:
 	ret
 
 
 display_menu:
 	Set_Cursor(1,7) 
 	Display_BCD(Soak_time)
-	Set_Cursor((1,11)
+	Set_Cursor(1,11)
 	Display_BCD(Soak_temp)
 	Set_Cursor(2,9)
 	Display_BCD(Reflow_time)
