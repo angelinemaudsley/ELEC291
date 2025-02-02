@@ -23,11 +23,12 @@ CLK               EQU 16600000 ; Microcontroller system frequency in Hz
 BAUD              EQU 115200 ; Baud rate of UART in bps
 TIMER1_RELOAD     EQU (0x100-(CLK/(16*BAUD)))
 TIMER0_RELOAD_1MS EQU (0x10000-(CLK/1000))
+TIMER2_RATE EQU 100 ; 100Hz or 10ms
+TIMER2_RELOAD EQU (65536-(CLK/(16*TIMER2_RATE))) ; Need to change timer 2 input divide to 16 in T2MOD
 
 START_BUTTON  equ P1.7
+PWM_OUT equ P1.0 ;logic 1 = oven on
 
-ORG 0x0000
-	ljmp main
 
 ;                1234567890123456    <- This helps determine the location of the counter
 soak_param: db  'Soak: xxs xxxC', 0
@@ -57,6 +58,10 @@ Reflow_time: ds 1
 Reflow_temp: ds 1
 current_temp: ds 1
 outside_temp: ds 1
+seconds: ds 1 ;seconds counter attached to timer 2 ISR
+pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
+pwm: ds 1 ; pwm percentage
+
 
 BSEG
 ; These five bit variables store the value of the pushbuttons after calling 'LCD_PB' below
@@ -66,8 +71,17 @@ PB2: dbit 1
 PB3: dbit 1
 PB4: dbit 1
 decrement1: dbit 1
+s_flag: dbit 1 ; set to 1 every time a second has passed
 
 CSEG
+ORG 0x0000
+	ljmp main
+org 0x0023
+	reti
+	; Timer/Counter 2 overflow interrupt vector
+org 0x002B
+	ljmp Timer2_ISR
+
 Init_All:
 	; Configure all the pins for biderectional I/O
 	mov	P3M1, #0x00
@@ -91,7 +105,21 @@ Init_All:
 	orl	CKCON,#0x08 ; CLK is the input for timer 0
 	anl	TMOD,#0xF0 ; Clear the configuration bits for timer 0
 	orl	TMOD,#0x01 ; Timer 0 in Mode 1: 16-bit timer
-	
+
+	; Initialize timer 2 for periodic interrupts
+	mov T2CON, #0 ; Stop timer/counter. Autoreload mode.
+	mov TH2, #high(TIMER2_RELOAD)
+	mov TL2, #low(TIMER2_RELOAD)
+	; Set the reload value
+	mov T2MOD, #0b1010_0000 ; Enable timer 2 autoreload, and clock divider is 16
+	mov RCMP2H, #high(TIMER2_RELOAD)
+	mov RCMP2L, #low(TIMER2_RELOAD)
+	; Init the free running 10 ms counter to zero
+	mov pwm_counter, #0
+	; Enable the timer and interrupts
+	orl EIE, #0x80 ; Enable timer 2 interrupt ET2=1
+	setb TR2 ; Enable timer 2
+	setb EA ; Enable global interrupts
 	ret
 	
 wait_1ms:
@@ -108,6 +136,29 @@ waitms:
 	lcall wait_1ms
 	djnz R2, waitms
 	ret
+Timer2_ISR:
+	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is
+	bit addressable.
+	push psw
+	push acc
+
+	inc pwm_counter
+	clr c
+	mov a, pwm
+	subb a, pwm_counter ; If pwm_counter <= pwm then c=1
+	cpl c
+	mov PWM_OUT, c
+
+	mov a, pwm_counter
+	cjne a, #100, Timer2_ISR_done
+	mov pwm_counter, #0
+	inc seconds ; It is super easy to keep a seconds count here
+	setb s_flag
+
+Timer2_ISR_done:
+	pop acc
+	pop psw
+	reti
 
 LCD_PB:
 	; Set variables to 1: 'no push button pressed'
@@ -306,12 +357,18 @@ main:
     mov Reflow_time, #0x00
     mov Reflow_temp, #0x00
     mov current_temp, #0x00
+    mov seconds, #0x00
+    mov pwm_counter, #0x00
+    mov pwm, #0x00
     clr decrement1
+    clr s_flag 
 	
 Forever:
 
 	state_0: 
+	lcall display_blank
 	mov a, STATE
+        mov pwm, #0
 	cjne a, #0, state_1
 	lcall LCD_PB
 	lcall check_decrement
@@ -322,6 +379,7 @@ Forever:
 	state_1: 
 	lcall display_blank
 	lcall display_heating
+	mov pwm, #100
 	
 	ljmp Forever
 	
