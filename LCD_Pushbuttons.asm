@@ -24,12 +24,16 @@ BAUD              EQU 115200 ; Baud rate of UART in bps
 TIMER1_RELOAD     EQU (0x100-(CLK/(16*BAUD)))
 TIMER0_RELOAD_1MS EQU (0x10000-(CLK/1000))
 
+START_BUTTON  equ
+
 ORG 0x0000
 	ljmp main
 
 ;              1234567890123456    <- This helps determine the location of the counter
-title:     db 'LCD PUSH BUTTONS', 0
-blank:     db '                ', 0
+soak_param: db  'Soak: xxs xxxC', 0
+reflow_param:db 'Reflow: xxs xxxC', 0
+heating_to:  db 'Ts:xxxC To:xxxC', 0
+heating_temp:db 'Temp: xxxC', 0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -44,6 +48,15 @@ $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
+DSEG at 0x30
+STATE: ds 1
+Soak_time: ds 1
+Soak_temp: ds 1
+Reflow_time: ds 1
+Reflow_temp: ds 1
+current_temp: ds 1
+outside_temp: ds 1
+
 BSEG
 ; These five bit variables store the value of the pushbuttons after calling 'LCD_PB' below
 PB0: dbit 1
@@ -51,6 +64,7 @@ PB1: dbit 1
 PB2: dbit 1
 PB3: dbit 1
 PB4: dbit 1
+Decrement: dbit 1
 
 CSEG
 Init_All:
@@ -153,28 +167,113 @@ LCD_PB:
 LCD_PB_Done:		
 	ret
 
-Display_PushButtons_LCD:
+check_decrement: 
+	jb PB0, check_stime
+	clp decrement
+	ljmp check_stime
+
+check_stime:
+	jb PB1, check_stemp
+	jb decrement, Soak_time_decrement
+	mov a, Soak_time
+	add a, #0x01
+	da a
+	mov Soak_time, a
+	ljmp check_stemp
+
+Soak_time_decrement: 
+	mov a, Soak_time
+	add a, #0x99
+	da a
+	mov Soak_time, a
+	ljmp check_stemp
+
+check_stemp:
+	jb PB2, check_rtime
+	jb decrement, Soak_temp_decrement
+	mov a, Soak_temp
+	add a, #0x01
+	da a
+	mov Soak_temp, a
+	cjne a, #0x250, check_rtime
+	mov a, #0x00
+	mov Soak_temp, a
+	ljmp check_rtime
+
+Soak_temp_decrement: 
+	mov a, Soak_temp
+	add a, #0x99
+	da a
+	mov Soak_temp, a
+	cjne a, #0x250, ADC_to_PB_L2
+	mov a, #0x00
+	mov Soak_temp, a
+	ljmp check_rtime
+
+check_rtime:
+	jb PB3, check_rtemp 
+	jb decrement, Reflow_time_decrement
+	mov a, Reflow_time
+	add a, #0x01
+	da a
+	mov Reflow_time, a
+	ljmp check_rtemp
+
+Reflow_time_decrement: 
+	mov a, Reflow_time
+	add a, #0x99
+	da a
+	mov Reflow_time, a
+	ljmp check_rtemp
+
+check_rtemp:
+	jb PB4, skip
+	jb decrement, Reflow_temp_decrement
+	mov a, Reflow_temp
+	add a, #0x01
+	da a
+	mov Reflow_temp, a
+	cjne a, #0x250, ADC_to_PB_L0
+	mov a, #0x00
+	mov Reflow_temp, a
+	ljmp skip
+
+Reflow_temp_decrement: 
+	mov a, Reflow_temp
+	add a, #0x99
+	da a
+	mov Reflow_temp, a
+	cjne a, #0x250, ADC_to_PB_L0
+	mov a, #0x00
+	mov Reflow_temp, a
+	ljmp skip
+
+skip:
+	ret
+
+
+display_menu:
+	Set_Cursor(1,7) 
+	Display_BCD(Soak_time)
+	Set_Cursor((1,11)
+	Display_BCD(Soak_temp)
+	Set_Cursor(2,9)
+	Display_BCD(Reflow_time)
+	Set_Cursor(2,13)
+	Display_BCD(Reflow_temp)
+	ret
+
+display_heating:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
-	mov a, #'0'
-	mov c, PB4
-	addc a, #0
-    lcall ?WriteData	
-	mov a, #'0'
-	mov c, PB3
-	addc a, #0
-    lcall ?WriteData	
-	mov a, #'0'
-	mov c, PB2
-	addc a, #0
-    lcall ?WriteData	
-	mov a, #'0'
-	mov c, PB1
-	addc a, #0
-    lcall ?WriteData	
-	mov a, #'0'
-	mov c, PB0
-	addc a, #0
-    lcall ?WriteData	
+	Send_Constant_String(#heating_temp)
+	Set_Cursor(1,4)
+	Display_BCD(Soak_temp)
+	Set_Cursor(1,12)
+	Display_BCD(outside_temp)
+	Set_Cursor(2,7)
+	Display_BCD(current_temp)
 	ret
 	
 main:
@@ -182,19 +281,32 @@ main:
 	lcall Init_All
     lcall LCD_4BIT
     
-    ; initial messages in LCD
+     ; initial messages in LCD
 	Set_Cursor(1, 1)
-    Send_Constant_String(#Title)
+    Send_Constant_String(#soak_param)
 	Set_Cursor(2, 1)
-    Send_Constant_String(#blank)
+    Send_Constant_String(#reflow_param)
+    mov STATE, #0x00
+    mov Soak_time, #0x00
+    mov Soak_temp, #0x00
+    mov Reflow_time, #0x00
+    mov Reflow_temp, #0x00
+    mov current_temp, #0x00
+    clr Decrement
 	
 Forever:
+
+	state_0: 
+	mov a, STATE
+	cnje a, #0, state_1
 	lcall LCD_PB
-	lcall Display_PushButtons_LCD
-	
-	; Wait 50 ms between readings
-	mov R2, #50
-	lcall waitms
+	lcall check_decrement
+	lcall display_menu
+	lcall Check_start
+	ljmp state_0
+
+	state_1: 
+	lcall display_heating
 	
 	ljmp Forever
 	
