@@ -55,11 +55,11 @@ $LIST
 DSEG at 0x30
 STATE: ds 1
 Soak_time: ds 1
-Soak_temp: ds 1
+Soak_temp: ds 2
 Reflow_time: ds 1
-Reflow_temp: ds 1
-current_temp: ds 1
-outside_temp: ds 1
+Reflow_temp: ds 2
+current_temp: ds 2
+outside_temp: ds 2
 
 BSEG
 ; These eight bit variables store the value of the pushbuttons after calling 'ADC_to_PB' below
