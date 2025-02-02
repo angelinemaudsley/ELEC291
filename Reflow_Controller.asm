@@ -264,11 +264,11 @@ display_menu:
 	Set_Cursor(1,7) 
 	Display_BCD(Soak_time)
 	Set_Cursor(1,11)
-	Display_BCD(Soak_temp)
+	Display_BCD3(Soak_temp)
 	Set_Cursor(2,9)
 	Display_BCD(Reflow_time)
 	Set_Cursor(2,13)
-	Display_BCD(Reflow_temp)
+	Display_BCD3(Reflow_temp)
 	ret
 
 display_heating:
