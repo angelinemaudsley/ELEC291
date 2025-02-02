@@ -29,11 +29,12 @@ START_BUTTON  equ P1.7
 ORG 0x0000
 	ljmp main
 
-;              1234567890123456    <- This helps determine the location of the counter
+;                1234567890123456    <- This helps determine the location of the counter
 soak_param: db  'Soak: xxs xxxC', 0
 reflow_param:db 'Reflow: xxs xxxC', 0
 heating_to:  db 'Ts:xxxC To:xxxC', 0
 heating_temp:db 'Temp: xxxC', 0
+blank: db       '                ', 0     
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -283,6 +284,11 @@ display_heating:
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
 	ret
+
+display_blank:
+	Set_Cursor(1,1)
+	Send_Constant_String(#blank)
+	ret
 	
 main:
 	mov sp, #0x7f
@@ -314,6 +320,7 @@ Forever:
 	ljmp state_0
 
 	state_1: 
+	lcall display_blank
 	lcall display_heating
 	
 	ljmp Forever
