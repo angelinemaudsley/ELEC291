@@ -29,6 +29,9 @@ TIMER2_RELOAD EQU (65536-(CLK/(16*TIMER2_RATE))) ; Need to change timer 2 input 
 START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
+ORG 0x0000
+	ljmp main
+
 
 ;                1234567890123456    <- This helps determine the location of the counter
 soak_param: db  'Soak: xxs xxxC', 0
@@ -74,8 +77,6 @@ decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 
 CSEG
-ORG 0x0000
-	ljmp main
 org 0x0023
 	reti
 	; Timer/Counter 2 overflow interrupt vector
@@ -137,7 +138,7 @@ waitms:
 	djnz R2, waitms
 	ret
 Timer2_ISR:
-	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is
+	clr TF2 
 	bit addressable.
 	push psw
 	push acc
