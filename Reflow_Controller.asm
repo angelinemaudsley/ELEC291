@@ -64,7 +64,7 @@ PB1: dbit 1
 PB2: dbit 1
 PB3: dbit 1
 PB4: dbit 1
-Decrement: dbit 1
+decrement1: dbit 1
 
 CSEG
 Init_All:
@@ -169,12 +169,12 @@ LCD_PB_Done:
 
 check_decrement: 
 	jb PB0, check_stime
-	clp decrement
+	cpl decrement1
 	ljmp check_stime
 
 check_stime:
 	jb PB1, check_stemp
-	jb decrement, Soak_time_decrement
+	jb decrement1, Soak_time_decrement
 	mov a, Soak_time
 	add a, #0x01
 	da a
@@ -190,7 +190,7 @@ Soak_time_decrement:
 
 check_stemp:
 	jb PB2, check_rtime
-	jb decrement, Soak_temp_decrement
+	jb decrement1, Soak_temp_decrement
 	mov a, Soak_temp
 	add a, #0x01
 	da a
@@ -212,7 +212,7 @@ Soak_temp_decrement:
 
 check_rtime:
 	jb PB3, check_rtemp 
-	jb decrement, Reflow_time_decrement
+	jb decrement1, Reflow_time_decrement
 	mov a, Reflow_time
 	add a, #0x01
 	da a
@@ -228,7 +228,7 @@ Reflow_time_decrement:
 
 check_rtemp:
 	jb PB4, skip
-	jb decrement, Reflow_temp_decrement
+	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
 	da a
@@ -292,7 +292,7 @@ main:
     mov Reflow_time, #0x00
     mov Reflow_temp, #0x00
     mov current_temp, #0x00
-    clr Decrement
+    clr decrement1
 	
 Forever:
 
