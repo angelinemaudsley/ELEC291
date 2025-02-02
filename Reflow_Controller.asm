@@ -298,7 +298,7 @@ Forever:
 
 	state_0: 
 	mov a, STATE
-	cnje a, #0, state_1
+	cjne a, #0, state_1
 	lcall LCD_PB
 	lcall check_decrement
 	lcall display_menu
