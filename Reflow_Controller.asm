@@ -252,9 +252,9 @@ skipp:
 	ret
 
 Check_start:
-	jb START_BUTTON, skip  ; if the 'Start' button is not pressed skip
+	jb START_BUTTON, skipp  ; if the 'Start' button is not pressed skip
 	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-	jb  START_BUTTON, skip  ; if the 'Start' button is not pressed skip
+	jb  START_BUTTON, skipp  ; if the 'Start' button is not pressed skip
 	jnb START_BUTTON, $		; Wait for button release.  The '$' means: jump to same instruction.
 	mov STATE, #0x01
 	ret
