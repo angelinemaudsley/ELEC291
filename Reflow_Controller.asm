@@ -355,7 +355,7 @@ display_heating:
 	Set_Cursor(1,4)
 	Display_BCD3(Soak_temp)
 	Set_Cursor(1,12)
-	Display_BCD3(outside_temp)
+	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
 	Display_BCD3(current_temp)
 	ret
