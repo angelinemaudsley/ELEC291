@@ -29,9 +29,6 @@ TIMER2_RELOAD EQU (65536-(CLK/(16*TIMER2_RATE))) ; Need to change timer 2 input 
 START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
-ORG 0x0000
-	ljmp main
-
 
 ;                1234567890123456    <- This helps determine the location of the counter
 soak_param: db  'Soak: xxs xxxC', 0
@@ -48,6 +45,7 @@ LCD_D4 equ P0.0
 LCD_D5 equ P0.1
 LCD_D6 equ P0.2
 LCD_D7 equ P0.3
+ADC_pn equ P1.1
 
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
@@ -64,6 +62,9 @@ outside_temp: ds 1
 seconds: ds 1 ;seconds counter attached to timer 2 ISR
 pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
 pwm: ds 1 ; pwm percentage
+x: ds 4
+y: ds 4
+bcd: ds 5
 
 
 BSEG
@@ -75,8 +76,15 @@ PB3: dbit 1
 PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
+mf: dbit 1
+
+$NOLIST
+$include(math32.inc)
+$LIST
 
 CSEG
+ORG 0x0000
+	ljmp main
 org 0x0023
 	reti
 	; Timer/Counter 2 overflow interrupt vector
@@ -121,7 +129,20 @@ Init_All:
 	orl EIE, #0x80 ; Enable timer 2 interrupt ET2=1
 	setb TR2 ; Enable timer 2
 	setb EA ; Enable global interrupts
-	ret
+
+	; Initialize the pin used by the ADC (P1.1) as input.
+	orl	P1M1, #0b00000010
+	anl	P1M2, #0b11111101
+	
+	; Initialize and start the ADC:
+	anl ADCCON0, #0xF0
+	orl ADCCON0, #0x07 ; Select channel 7
+	; AINDIDS select if some pins are analog inputs or digital I/O:
+	mov AINDIDS, #0x00 ; Disable all analog inputs
+	orl AINDIDS, #0b10000000 ; P1.1 is analog input
+	orl ADCCON1, #0x01 ; Enable ADC
+
+ret
 	
 wait_1ms:
 	clr	TR0 ; Stop timer 0
@@ -138,7 +159,7 @@ waitms:
 	djnz R2, waitms
 	ret
 Timer2_ISR:
-	clr TF2 
+	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is
 	bit addressable.
 	push psw
 	push acc
@@ -305,13 +326,19 @@ skipp:
 	ret
 
 Check_start:
-	jb START_BUTTON, skipp  ; if the 'Start' button is not pressed skip
+	jb START_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
 	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-	jb  START_BUTTON, skipp  ; if the 'Start' button is not pressed skip
+	jb  START_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
 	jnb START_BUTTON, $		; Wait for button release.  The '$' means: jump to same instruction.
 	mov STATE, #0x01
 	ret
+sjmp:
+ljmp skipp
 
+wait_for_ti:
+    jnb TI, wait_for_ti
+    clr TI
+    ret
 
 display_menu:
 	Set_Cursor(1,7) 
@@ -341,7 +368,51 @@ display_blank:
 	Set_Cursor(1,1)
 	Send_Constant_String(#blank)
 	ret
+
+Display_formated_BCD:
+	Set_Cursor(1, 12)
+	Display_BCD(bcd+2)
+	Display_char(#'.')
+	Display_BCD(bcd+1)
+	Display_BCD(bcd+0)
+	Set_Cursor(2, 10)
+	;Display_char(#'=')
+	ret
+
+Outside_tmp:
+    clr ADCF
+    setb ADCS
+    jnb ADCF, $
+
+    mov a, ADCRH
+    swap a
+    push acc
+    anl a, #0x0f
+    mov R1, a
+    pop acc
+    anl a, #0xf0
+    orl a, ADCRL
+    mov R0, A
+    
+    ; Convert to voltage
+	mov x+0, R0
+	mov x+1, R1
+	mov x+2, #0
+	mov x+3, #0
+	Load_y(50300) ; VCC voltage measured
+	lcall mul32
+	Load_y(4095) ; 2^12-1
+	lcall div32
+	Load_y(27300)
+	lcall sub32
+	load_y(100)
+	lcall mul32
+
+    lcall hex2bcd
+    lcall Display_formated_BCD
 	
+	ret
+
 main:
 	mov sp, #0x7f
 	lcall Init_All
@@ -365,7 +436,7 @@ main:
     clr s_flag 
 	
 Forever:
-
+	
 	state_0: 
 	lcall display_blank
 	mov a, STATE
@@ -381,7 +452,7 @@ Forever:
 	lcall display_blank
 	lcall display_heating
 	mov pwm, #100
-	
+	lcall outside_tmp
 	ljmp Forever
 	
 END
