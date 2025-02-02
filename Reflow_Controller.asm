@@ -38,12 +38,15 @@ START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
 
-;                1234567890123456    <- This helps determine the location of the counter
-soak_param: db  'Soak: xxs xxxC', 0
-reflow_param:db 'Reflow: xxs xxxC', 0
-heating_to:  db 'Ts:xxxC To:xxxC', 0
-heating_temp:db 'Temp: xxxC', 0
-blank: db       '                ', 0     
+;                   1234567890123456    <- This helps determine the location of the counter
+soak_param:db      'Soak: xxs xxxC', 0
+reflow_param:db    'Reflow: xxs xxxC', 0
+heating_to:db      'Ts:xxxC To:xxxC', 0
+heating_temp:db    'Temp: xxxC', 0
+blank:db           '                ', 0
+safety_message:db  'Can't Read Temp', 0
+soaking:db         'Soaking time', 0
+time:db            'Time:xxs',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -86,6 +89,7 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
+60temp: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -432,10 +436,32 @@ Outside_tmp:
 	
 	ret
 
+check_temps:
+	mov a, current_temp 
+	cjne a, Soak_temp, skipp
+	mov STATE, #0x02
+	ret
+check_currenttemps:
+	mov a, current_temp
+	cjne a, #0x60, skipp 
+	setb 60temp
+	ret
+safety_feature:
+	mov a, seconds
+	cjne a, #0x60, skipp
+	jb 60temp, skipp
+	lcall display_blank
+	mov pwm, #0
+	Set_Cursor(1,1)
+	Send_Constant_String(#safety_message)
+safety_feature_loop:
+	ljmp safety_feature_loop
+
 main:
 	mov sp, #0x7f
 	lcall Init_All
     lcall LCD_4BIT
+    lcall Timer2_ISR
     
      ; initial messages in LCD
     mov STATE, #0x00
@@ -449,6 +475,7 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
+    clr 60temp
 	
 Forever:
 	lcall display_blank
@@ -469,23 +496,36 @@ state_0_loop:
 
 state_1: 
 	lcall display_blank
+	mov a, seconds
+	mov a, #0x00
+	mov seconds, a
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
 	lcall display_heating
 	mov pwm, #100
 	lcall outside_tmp
-    mov R2, #250
-	lcall waitms
-	mov R2, #250
-	lcall waitms
-    ljmp state_1_loop
+	lcall check_currenttemp
+	lcall safety_feature
+	lcall check_temps
+	ljmp state_1_loop
 
-	state_2:
+state_2:
+	lcall display_blank 
+	mov a, seconds
+	mov a, #0x00
+	mov seconds, a
+	Set_Cursor(1,1)
+	Send_Constant_String(#soaking)
+	Set_Cursor(2,1)
+	Send_Constant_String(#time)
+state_2_loop: 
+	
 
 	ljmp Forever
 	
