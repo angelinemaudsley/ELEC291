@@ -368,6 +368,8 @@ display_heating:
 display_blank:
 	Set_Cursor(1,1)
 	Send_Constant_String(#blank)
+	Set_Cursor(2,1)
+	Send_Constant_String(#blank)
 	ret
 
 Display_formated_BCD:
@@ -453,7 +455,7 @@ Forever:
 	state_1: 
 	jb blankk, heat
 	lcall display_blank
-	cpl blankk
+	setb blankk
 heat:
 	mov a, STATE
 	cjne a, #1, state_2
