@@ -136,18 +136,24 @@ Init_All:
 	setb TR2 ; Enable timer 2
 	setb EA ; Enable global interrupts
 
-	; Initialize the pin used by the ADC (P1.1) as input.
+; Initialize the pin used by the ADC-LM335 (P1.1) as input.
 	orl	P1M1, #0b00000010
 	anl	P1M2, #0b11111101
 	
-	; Initialize and start the ADC:
-	anl ADCCON0, #0xF0
-	orl ADCCON0, #0x07 ; Select channel 7
-	; AINDIDS select if some pins are analog inputs or digital I/O:
-	mov AINDIDS, #0x00 ; Disable all analog inputs
-	orl AINDIDS, #0b10000000 ; P1.1 is analog input
-	orl ADCCON1, #0x01 ; Enable ADC
+    ;initialize the pint used by ADC-opamp output as input pin 1 (P0.5) AIN4
+    orl	P0M1, #0b00010000
+	anl	P0M2, #0b11101111
+	
 
+	; Initialize and start the ADC-LM335:
+	;do these two when you are going to read from pin 14
+    ;anl ADCCON0, #0xF0
+	;orl ADCCON0, #0x07 ; Select channel 7
+	
+    ; AINDIDS select if some pins are analog inputs or digital I/O:
+	mov AINDIDS, #0x00 ; Disable all analog inputs
+	orl AINDIDS, #0b10010000 ; P1.1 and P0.5 is analog input
+	orl ADCCON1, #0x01 ; Enable ADC
 ret
 	
 wait_1ms:
@@ -403,6 +409,9 @@ conv_to_bcd:
     lcall hex2bcd
 ret
 Outside_tmp:
+    anl ADCCON0, #0xF0
+    orl ADCCON0, #0x07 ; Select channel 7
+
     clr ADCF
     setb ADCS
     jnb ADCF, $
