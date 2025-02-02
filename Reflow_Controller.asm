@@ -342,6 +342,10 @@ wait_for_ti:
     ret
 
 display_menu:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#soak_param)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#reflow_param)
 	Set_Cursor(1,7) 
 	Display_BCD(Soak_time)
 	Set_Cursor(1,11)
@@ -422,10 +426,6 @@ main:
     lcall LCD_4BIT
     
      ; initial messages in LCD
-	Set_Cursor(1, 1)
-    Send_Constant_String(#soak_param)
-	Set_Cursor(2, 1)
-    Send_Constant_String(#reflow_param)
     mov STATE, #0x00
     mov Soak_time, #0x00
     mov Soak_temp, #0x00
