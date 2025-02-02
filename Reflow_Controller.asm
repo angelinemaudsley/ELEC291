@@ -24,7 +24,7 @@ BAUD              EQU 115200 ; Baud rate of UART in bps
 TIMER1_RELOAD     EQU (0x100-(CLK/(16*BAUD)))
 TIMER0_RELOAD_1MS EQU (0x10000-(CLK/1000))
 
-START_BUTTON  equ
+START_BUTTON  equ P1.7
 
 ORG 0x0000
 	ljmp main
