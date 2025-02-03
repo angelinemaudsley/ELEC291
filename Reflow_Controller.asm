@@ -535,7 +535,7 @@ state_0:
 	Send_Constant_String(#reflow_param)
 state_0_loop:
 	mov a, STATE
-        mov pwm, #0
+        mov pwm, #100
 	cjne a, #0, state_1
 	lcall LCD_PB
 	lcall check_decrement
@@ -553,7 +553,7 @@ state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
 	lcall display_heating
-	mov pwm, #100
+	mov pwm, #0
 	lcall outside_tmp
 	lcall oven_tmp
     mov R2, #250
