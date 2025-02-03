@@ -445,20 +445,23 @@ Outside_tmp:
 	
 	ret
 
+skipp1:
+	ret
+
 check_temps:
 	mov a, current_temp 
-	cjne a, Soak_temp, skipp
+	cjne a, Soak_temp, skipp1
 	mov STATE, #0x02
 	ret
-check_currenttemps:
+check_currenttemp:
 	mov a, current_temp
-	cjne a, #0x60, skipp 
+	cjne a, #0x60, skipp1
 	setb temp_flag
 	ret
 safety_feature:
 	mov a, seconds
-	cjne a, #0x60, skipp
-	jb temp_flag, skipp
+	cjne a, #0x60, skipp1
+	jb temp_flag, skipp1
 	lcall display_blank
 	mov pwm, #0
 	Set_Cursor(1,1)
