@@ -38,15 +38,12 @@ START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
 
-;                   1234567890123456    <- This helps determine the location of the counter
-soak_param:db      'Soak: xxs xxxC', 0
-reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to:db      'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: xxxC', 0
-blank:db           '                ', 0
-safety_message:db  'Cant Read Temp', 0
-soaking:db         'Soaking time', 0
-time:db            'Time:xxs',0
+;                1234567890123456    <- This helps determine the location of the counter
+soak_param: db  'Soak: xxs xxxC', 0
+reflow_param:db 'Reflow: xxs xxxC', 0
+heating_to:  db 'Ts:xxxC To:xxxC', 0
+heating_temp:db 'Temp: xxxC', 0
+blank: db       '                ', 0     
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -89,7 +86,6 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
-temp_flag: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -136,7 +132,7 @@ Init_All:
 	setb TR2 ; Enable timer 2
 	setb EA ; Enable global interrupts
 
-; Initialize the pin used by the ADC-LM335 (P1.1) as input.
+	; Initialize the pin used by the ADC-LM335 (P1.1) as input.
 	orl	P1M1, #0b00000010
 	anl	P1M2, #0b11111101
 	
@@ -154,6 +150,8 @@ Init_All:
 	mov AINDIDS, #0x00 ; Disable all analog inputs
 	orl AINDIDS, #0b10010000 ; P1.1 and P0.5 is analog input
 	orl ADCCON1, #0x01 ; Enable ADC
+
+
 ret
 	
 wait_1ms:
@@ -410,7 +408,7 @@ conv_to_bcd:
 ret
 Outside_tmp:
     anl ADCCON0, #0xF0
-    orl ADCCON0, #0x07 ; Select channel 7
+	orl ADCCON0, #0x07 ; Select channel 7 
 
     clr ADCF
     setb ADCS
@@ -439,41 +437,81 @@ Outside_tmp:
 	lcall sub32
 	load_y(100)
 	lcall mul32
-
+    ;save outside temp to z to later add onto the oven temp
+    mov z+0, x+0
+    mov z+1, x+1
+    mov z+2, x+2
+    mov z+3, x+3 
     lcall hex2bcd
     lcall Display_formated_BCD
 	
 	ret
 
-skipp1:
-	ret
+oven_tmp:
+    anl  ADCCON0, #0xF0  
+    orl  ADCCON0, #0x04  ; Select AIN4 (P0.5)
 
-check_temps:
-	mov a, current_temp 
-	cjne a, Soak_temp, skipp1
-	mov STATE, #0x02
+    clr ADCF
+    setb ADCS
+    jnb ADCF, $
+
+    mov a, ADCRH
+    swap a
+    push acc
+    anl a, #0x0f
+    mov R1, a
+    pop acc
+    anl a, #0xf0
+    orl a, ADCRL
+    mov R0, A
+    
+    ; Convert to voltage
+	mov x+0, R0
+	mov x+1, R1
+	mov x+2, #0
+	mov x+3, #0
+    Load_y(50300) ; VCC voltage measured
+	lcall mul32
+	Load_y(4095) ; 2^12-1
+	lcall div32
+
+	;vout of opamp should now be in x
+    ;use formula vout=41uV/degC * R1/R2 --> degC = (vout*R2)/41*r1
+    ;first calculate vout*R2:
+    load_y(1469)
+    lcall mul32
+    ;now vout*R2 ohm is in x
+    ;next we will take 461 650V and divide
+    load_y(461650) 
+    lcall div32
+    ;multiply by 100k and then divide by 41 to cancel units
+    load_y(1000000)
+    lcall mul32
+    load_y(41)
+    lcall div32
+    ;move the outside temp to y and add
+    mov y+0, z+0
+    mov y+1, z+1
+    mov y+2, z+2
+    mov y+3, z+3
+    lcall add32
+	mov current_temp, x
+    lcall hex2bcd
+    lcall display_oven_tmp
+ret
+
+display_oven_tmp:
+	Set_Cursor(2,6)
+    display_bcd(bcd+3)
+	Display_BCD(bcd+2)
+	Display_char(#'.')
+	Display_BCD(bcd+1)
 	ret
-check_currenttemp:
-	mov a, current_temp
-	cjne a, #0x60, skipp1
-	setb temp_flag
-	ret
-safety_feature:
-	mov a, seconds
-	cjne a, #0x60, skipp1
-	jb temp_flag, skipp1
-	lcall display_blank
-	mov pwm, #0
-	Set_Cursor(1,1)
-	Send_Constant_String(#safety_message)
-safety_feature_loop:
-	ljmp safety_feature_loop
 
 main:
 	mov sp, #0x7f
 	lcall Init_All
     lcall LCD_4BIT
-    lcall Timer2_ISR
     
      ; initial messages in LCD
     mov STATE, #0x00
@@ -487,7 +525,6 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
-    clr temp_flag
 	
 Forever:
 	lcall display_blank
@@ -508,37 +545,24 @@ state_0_loop:
 
 state_1: 
 	lcall display_blank
-	mov a, seconds
-	mov a, #0x00
-	mov seconds, a
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
-
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
 	lcall display_heating
 	mov pwm, #100
 	lcall outside_tmp
-	lcall check_currenttemp
-	lcall safety_feature
-	lcall check_temps
-	ljmp state_1_loop
+	lcall oven_tmp
+    mov R2, #250
+	lcall waitms
+	mov R2, #250
+	lcall waitms
+    ljmp state_1_loop
 
-state_2:
-	lcall display_blank 
-	mov a, seconds
-	mov a, #0x00
-	mov seconds, a
-	Set_Cursor(1,1)
-	Send_Constant_String(#soaking)
-	Set_Cursor(2,1)
-	Send_Constant_String(#time)
-state_2_loop: 
-	ljmp state_2_loop
-	
+	state_2:
 
 	ljmp Forever
 	
