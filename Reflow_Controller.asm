@@ -89,7 +89,7 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
-60temp: dbit 1
+temp_flag: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -453,12 +453,12 @@ check_temps:
 check_currenttemps:
 	mov a, current_temp
 	cjne a, #0x60, skipp 
-	setb 60temp
+	setb temp_flag
 	ret
 safety_feature:
 	mov a, seconds
 	cjne a, #0x60, skipp
-	jb 60temp, skipp
+	jb temp_flag, skipp
 	lcall display_blank
 	mov pwm, #0
 	Set_Cursor(1,1)
@@ -484,7 +484,7 @@ main:
     mov pwm, #0x00
     clr decrement1
     clr s_flag 
-    clr 60temp
+    clr temp_flag
 	
 Forever:
 	lcall display_blank
