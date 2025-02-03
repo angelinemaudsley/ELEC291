@@ -44,7 +44,7 @@ reflow_param:db    'Reflow: xxs xxxC', 0
 heating_to:db      'Ts:xxxC To:xxxC', 0
 heating_temp:db    'Temp: xxxC', 0
 blank:db           '                ', 0
-safety_message:db  'Can't Read Temp', 0
+safety_message:db  'Cant Read Temp', 0
 soaking:db         'Soaking time', 0
 time:db            'Time:xxs',0
 
