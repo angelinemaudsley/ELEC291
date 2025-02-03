@@ -43,7 +43,10 @@ soak_param: db  'Soak: xxs xxxC', 0
 reflow_param:db 'Reflow: xxs xxxC', 0
 heating_to:  db 'Ts:xxxC To:xxxC', 0
 heating_temp:db 'Temp: xxxC', 0
-blank: db       '                ', 0     
+blank: db       '                ', 0 
+safety_message:db  'Cant Read Temp', 0
+soaking:db         'Soaking time', 0
+time:db            'Time:xxs',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -86,6 +89,7 @@ PB4: dbit 1
 decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
+temp_flag: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -507,11 +511,35 @@ display_oven_tmp:
 	Display_char(#'.')
 	Display_BCD(bcd+1)
 	ret
+skipp1:
+	ret
+
+check_temps:
+	mov a, current_temp 
+	cjne a, Soak_temp, skipp1
+	mov STATE, #0x02
+	ret
+check_currenttemp:
+	mov a, current_temp
+	cjne a, #0x60, skipp1
+	setb temp_flag
+	ret
+safety_feature:
+	mov a, seconds
+	cjne a, #0x60, skipp1
+	jb temp_flag, skipp1
+	lcall display_blank
+	mov pwm, #0
+	Set_Cursor(1,1)
+	Send_Constant_String(#safety_message)
+safety_feature_loop:
+	ljmp safety_feature_loop
 
 main:
 	mov sp, #0x7f
 	lcall Init_All
     lcall LCD_4BIT
+	lcall Timer2_ISR
     
      ; initial messages in LCD
     mov STATE, #0x00
@@ -545,6 +573,9 @@ state_0_loop:
 
 state_1: 
 	lcall display_blank
+	mov a, seconds
+	mov a, #0x00
+	mov seconds, a
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
@@ -556,13 +587,23 @@ state_1_loop:
 	mov pwm, #0
 	lcall outside_tmp
 	lcall oven_tmp
-    mov R2, #250
-	lcall waitms
-	mov R2, #250
-	lcall waitms
-    ljmp state_1_loop
+	lcall check_currenttemp
+	lcall safety_feature
+	lcall check_temps
+    
+	ljmp state_1_loop
 
-	state_2:
+state_2:
+	lcall display_blank 
+	mov a, seconds
+	mov a, #0x00
+	mov seconds, a
+	Set_Cursor(1,1)
+	Send_Constant_String(#soaking)
+	Set_Cursor(2,1)
+	Send_Constant_String(#time)
+state_2_loop: 
+	ljmp state_2_loop
 
 	ljmp Forever
 	
