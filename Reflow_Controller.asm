@@ -69,6 +69,7 @@ Soak_temp: ds 1
 Reflow_time: ds 1
 Reflow_temp: ds 1
 current_temp: ds 1
+current_temp_hund: ds 1
 outside_temp: ds 1
 seconds: ds 1 ;seconds counter attached to timer 2 ISR
 pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
@@ -502,6 +503,7 @@ oven_tmp:
     lcall hex2bcd
     lcall display_oven_tmp
     mov current_temp, bcd+2
+    mov current_temp_hund, bcd+3
     
 ret
 
@@ -518,6 +520,8 @@ skipp1:
 check_temps:
 	mov a, current_temp 
 	cjne a, Soak_temp, skipp1
+	mov a, current_temp_hund
+	cjne a, soak_temp_hund, skipp1
 	mov STATE, #0x02
 	ret
 check_currenttemp:
