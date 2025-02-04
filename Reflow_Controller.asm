@@ -38,12 +38,12 @@ START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 
 
-;                1234567890123456    <- This helps determine the location of the counter
-soak_param: db  'Soak: xxs xxxC', 0
-reflow_param:db 'Reflow: xxs xxxC', 0
-heating_to:  db 'Ts:xxxC To:xxxC', 0
-heating_temp:db 'Temp: xxxC', 0
-blank: db       '                ', 0 
+;                   1234567890123456    <- This helps determine the location of the counter
+soak_param: db     'Soak: xxs xxxC', 0
+reflow_param:db    'Reflow: xxs xxxC', 0
+heating_to:  db    'Ts:xxxC To:xxxC', 0
+heating_temp:db    'Temp: xxxC', 0
+blank: db          '                ', 0 
 safety_message:db  'Cant Read Temp', 0
 soaking:db         'Soaking time', 0
 time:db            'Time:xxs',0
@@ -612,7 +612,8 @@ state_2:
 	Send_Constant_String(#time)
 state_2_loop: 
 	ljmp state_2_loop
-
+	Set_Cursor(2,6)
+	display_BCD(seconds)
 	ljmp Forever
 	
 END
