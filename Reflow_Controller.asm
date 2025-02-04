@@ -499,7 +499,7 @@ oven_tmp:
     mov y+2, z+2
     mov y+3, z+3
     lcall add32
-	mov current_temp, x
+    mov current_temp, x
     lcall hex2bcd
     lcall display_oven_tmp
 ret
