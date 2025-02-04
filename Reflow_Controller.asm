@@ -190,6 +190,9 @@ Timer2_ISR:
 	cjne a, #100, Timer2_ISR_done
 	mov pwm_counter, #0
 	inc seconds ; It is super easy to keep a seconds count here
+	mov a, seconds
+	da, a
+	mov seconds, a
 	setb s_flag
 
 Timer2_ISR_done:
@@ -614,9 +617,9 @@ state_2:
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
 state_2_loop: 
-	ljmp state_2_loop
 	Set_Cursor(2,6)
 	display_BCD(seconds)
+	ljmp state_2_loop
 	ljmp Forever
 	
 END
