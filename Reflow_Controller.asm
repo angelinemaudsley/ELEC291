@@ -501,10 +501,7 @@ oven_tmp:
     lcall add32
     lcall hex2bcd
     lcall display_oven_tmp
-    mov bcd, #0
-    mov bcd+1, #0
-    lcall bcd2hex 
-    mov current_temp, x
+    mov current_temp, bcd+2
     
 ret
 
