@@ -66,6 +66,7 @@ DSEG at 30h
 STATE: ds 1
 Soak_time: ds 1
 Soak_temp: ds 1
+soak_temp_hund: ds 1
 Reflow_time: ds 1
 Reflow_temp: ds 1
 current_temp: ds 1
@@ -550,9 +551,11 @@ main:
     mov STATE, #0x00
     mov Soak_time, #0x00
     mov Soak_temp, #0x40
+    mov soak_temp_hund, #0x00
     mov Reflow_time, #0x00
     mov Reflow_temp, #0x00
     mov current_temp, #0x00
+    mov current_temp_hund, #0x00
     mov seconds, #0x00
     mov pwm_counter, #0x00
     mov pwm, #0x00
