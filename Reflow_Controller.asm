@@ -448,12 +448,6 @@ Outside_tmp:
     mov z+3, x+3 
     lcall hex2bcd
     lcall Display_formated_BCD
-    ;mov bcd, bcd+2
-    ;mov bcd+1, bcd+3
-    ;mov bcd+2, #0
-    ;mov bcd+3, #0
-    ;lcall bcd2hex 
-    mov current_temp, x
 	
 	ret
 
@@ -508,6 +502,12 @@ oven_tmp:
     mov current_temp, x
     lcall hex2bcd
     lcall display_oven_tmp
+    mov bcd, bcd+2
+    mov bcd+1, bcd+3
+    mov bcd+2, #0
+    mov bcd+3, #0
+    lcall bcd2hex 
+    mov current_temp, x
 ret
 
 display_oven_tmp:
