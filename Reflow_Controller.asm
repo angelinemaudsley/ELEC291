@@ -499,19 +499,13 @@ oven_tmp:
     mov y+2, z+2
     mov y+3, z+3
     lcall add32
-    mov current_temp, x
     lcall hex2bcd
-    ;lcall display_oven_tmp
-    mov bcd, bcd+2
-    mov bcd+1, bcd+3
-    mov bcd+2, #0
-    mov bcd+3, #0
+    lcall display_oven_tmp
+    mov bcd, #0
+    mov bcd+1, #0
     lcall bcd2hex 
     mov current_temp, x
-    lcall hex2bcd
-    Set_Cursor(2,6)
-    display_bcd(bcd+1)
-	Display_BCD(bcd)
+    
 ret
 
 display_oven_tmp:
