@@ -507,9 +507,11 @@ oven_tmp:
     mov bcd+2, #0
     mov bcd+3, #0
     lcall bcd2hex 
-    lcall hex2bcd
-    lcall display_oven_tmp
     mov current_temp, x
+    lcall hex2bcd
+    Set_Cursor(2,6)
+    display_bcd(bcd+1)
+	Display_BCD(bcd)
 ret
 
 display_oven_tmp:
