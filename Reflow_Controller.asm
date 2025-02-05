@@ -76,7 +76,6 @@ seconds: ds 1 ;seconds counter attached to timer 2 ISR
 pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
 pwm: ds 1 ; pwm percentage
 reflow_temp_100:ds 1
-soak_temp_hund: ds 1
 x: ds 4
 y: ds 4
 z: ds 4
