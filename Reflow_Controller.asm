@@ -75,6 +75,8 @@ outside_temp: ds 1
 seconds: ds 1 ;seconds counter attached to timer 2 ISR
 pwm_counter: ds 1 ; Free running counter 0, 1, 2, ..., 100, 0
 pwm: ds 1 ; pwm percentage
+reflow_temp_100:ds 1
+soak_temp_hund: ds 1
 x: ds 4
 y: ds 4
 z: ds 4
@@ -287,20 +289,53 @@ check_stemp:
 	add a, #0x01
 	da a
 	mov Soak_temp, a
-	cjne a, #250, check_rtime
+    cjne a, #0x99, cont_s
+    ljmp add_hund_s
+    cont_s:
+    mov a, soak_temp_hund
+	cjne a, #0x20, fini
+    mov a, Soak_temp
+    cjne a, #0x50, check_rtime
 	mov a, #0x00
 	mov Soak_temp, a
+    mov a, soak_temp_hund
+    mov a, #0x00
+    mov soak_temp_hund, a
+    fini:
 	ljmp check_rtime
+
+add_hund_s:
+    mov a, soak_temp_hund
+    add a, #0x10
+    da A
+    mov soak_temp_hund, A
+    mov a, Soak_temp
+    ljmp cont_s
 
 Soak_temp_decrement: 
 	mov a, Soak_temp
 	add a, #0x99
 	da a
 	mov Soak_temp, a
-	cjne a, #250, check_rtime
-	mov a, #0x00
-	mov Soak_temp, a
+    cjne a, #0x00, continue_dec_s
+    ljmp decrement_s_hund    
+    continue_dec_s:
+    mov a, soak_temp_hund
+    cjne a, #0x00, cont_s_dec
+    mov a, soak_temp
+	cjne a, #0x00, cont_s_dec
+    mov soak_temp_hund, #0x20
+    mov soak_temp, #0x50
+    cont_s_dec:
 	ljmp check_rtime
+
+decrement_s_hund:
+    mov a, soak_temp_hund
+    SUBB a, #0x10
+    da A
+    mov soak_temp_hund, A
+    mov a, Soak_temp
+    ljmp continue_dec_s
 
 check_rtime:
 	jb PB3, check_rtemp 
@@ -323,23 +358,59 @@ check_rtemp:
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
-	;da a
-	mov Reflow_temp, a
-	cjne a, #250, skipp
-	mov a, #0x00
-	mov Reflow_temp, a
+    da a
+    mov Reflow_temp, a
+	cjne a, #0x99, cont_r
+    ljmp add_hundreds_r
+    cont_r:
+    ;check hundreds
+    mov a, reflow_temp_100
+    cjne a, #0x20, cont_count ;make sure to check with 20 since the hundreds place value is multiplied by 10
+	mov a, reflow_temp
+    cjne a, #0x50, skipp
+    mov a, #0x00
+    mov reflow_temp, a
+    mov a, reflow_temp_100
+    mov a, #0x00
+	mov Reflow_temp_100, a
+    cont_count:
 	ljmp skipp
+
+add_hundreds_r:
+    mov a, reflow_temp_100
+    add a, #0x10 ;add by ten bc in display it is 2 digit numbers so instead of showing 0120 for 120 itll show 120
+    da A
+    mov reflow_temp_100, A
+    mov a, Reflow_temp
+    ljmp cont_r
 
 Reflow_temp_decrement: 
 	mov a, Reflow_temp
 	add a, #0x99
 	da a
 	mov Reflow_temp, a
-	cjne a, #250, skipp
-	mov a, #0x00
-	mov Reflow_temp, a
+    cjne a, #0x00, continue_dec_r
+    ljmp decrement_r_hund
+    continue_dec_r:
+	mov a, reflow_temp_100
+    cjne a, #0x20, cont_dec ;make sure to check with 20 since the hundreds place value is multiplied by 10
+	mov a, reflow_temp
+    cjne a, #0x50, skipp
+    mov a, #0x20
+    mov reflow_temp, a
+    mov a, reflow_temp_100
+    mov a, #0x50
+	mov Reflow_temp_100, a
+    cont_dec:
 	ljmp skipp
 
+    decrement_r_hund:
+    mov a, reflow_temp_100
+    SUBB a, #0x10
+    da A
+    mov reflow_temp_100, a
+    mov a, reflow_temp
+    ljmp continue_dec_r
 skipp:
 	ret
 
@@ -362,18 +433,15 @@ display_menu:
 	Set_Cursor(1,7) 
 	Display_BCD(Soak_time)
 	Set_Cursor(1,11)
-	Display_BCD3(Soak_temp)
+	Display_BCD(Soak_temp_hund)
+	set_cursor(1,12)
+	display_bcd(soak_temp)
 	Set_Cursor(2,9)
 	Display_BCD(Reflow_time)
-	set_cursor(2,13)
-    ;mov a, Reflow_temp
-    ;lcall conv_to_bcd_high
-    ;mov a, Reflow_temp
-    ;lcall conv_to_bcd_low
-    ;lcall conv_to_bcd
-    ;set_cursor(2,13)
-    ;display_bcd(bcd+2)
-    display_bcd3(Reflow_temp)
+    set_cursor(2,13)
+    display_bcd(reflow_temp_100)
+	set_cursor(2,14)
+    display_bcd(reflow_temp)
     ret
 
 display_heating:
@@ -562,6 +630,8 @@ main:
     mov seconds, #0x00
     mov pwm_counter, #0x00
     mov pwm, #0x00
+    mov reflow_temp_100, #0x00
+    mov soak_temp_hund, #0x00
     clr decrement1
     clr s_flag 
 	
@@ -581,7 +651,6 @@ state_0_loop:
 	lcall display_menu
 	lcall Check_start
 	ljmp state_0_loop
-
 state_1: 
 	lcall display_blank
 	mov a, seconds
