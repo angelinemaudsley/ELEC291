@@ -684,6 +684,9 @@ state_2:
 state_2_loop: 
 	Set_Cursor(2,6)
 	display_BCD(seconds)
+	mov x, seconds 
+	lcall hex2bcd 
+	display_BCD(bcd+2)
 	mov pwm, #20
 	ljmp state_2_loop
 	ljmp Forever
