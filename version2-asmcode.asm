@@ -58,6 +58,14 @@ LCD_D6 equ P0.2
 LCD_D7 equ P0.3
 ;ADC_pn equ P1.1
 
+; new variables
+reflowing:         db    'Reflowing...', 0
+cooling:           db    'Cooling...', 0
+cooling_time:      db    'Cool Time:xxs', 0
+cooldown_complete: db    'Cooldown Done', 0
+ready_to_open:     db    'Ready to Open', 0
+
+
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
@@ -608,6 +616,14 @@ safety_feature:
 	Send_Constant_String(#safety_message)
 safety_feature_loop:
 	ljmp safety_feature_loop
+	
+; new function
+display_ready:
+    Set_Cursor(1, 1)
+    Send_Constant_String(#cooldown_complete)
+    Set_Cursor(2, 1)
+    Send_Constant_String(#ready_to_open)
+    ret
 
 main:
 	mov sp, #0x7f
@@ -692,6 +708,9 @@ state_2_loop:
 	ljmp state_2_loop
 	ljmp Forever
 	
+; link state 2 to state 3
+	
+	
 state_3:
     lcall display_blank
     mov seconds, #0x00
@@ -708,7 +727,7 @@ state_3_loop:
     mov x, seconds
     lcall hex2bcd
     display_BCD(bcd)
-    mov pwm, #100
+    mov pwm, #0
     lcall check_temps
     lcall safety_feature
     mov R2, #250
@@ -756,10 +775,11 @@ state_5:
     
 state_5_loop:
     mov pwm, #0
-    lcall safety_feature
     lcall display_ready
     mov a, STATE
-    cjne a, #5, state_0
-    ljmp state_5_loop
+    cjne a, #5, state_0_near
+    sjmp state_5_loop
 
+state_0_near:
+    ljmp state_0
 END
