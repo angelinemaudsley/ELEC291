@@ -586,6 +586,10 @@ check_temps:
 	mov a, current_temp 
 	cjne a, Soak_temp, skipp1
 	mov a, current_temp_hund
+	mov x, soak_temp_hund 
+	load_y(10)
+	lcall div32 
+	mov soak_temp_hund, x
 	cjne a, soak_temp_hund, skipp1
 	mov STATE, #0x02
 	ret
