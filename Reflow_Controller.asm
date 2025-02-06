@@ -313,24 +313,21 @@ Soak_temp_decrement:
 	add a, #0x99
 	da a
 	mov Soak_temp, a
-    cjne a, #0x00, continue_dec_s
+    cjne a, #0x00, check_rtime
     ljmp decrement_s_hund    
     continue_dec_s:
-    mov a, soak_temp_hund
-    cjne a, #0x00, cont_s_dec
-    mov a, soak_temp
-	cjne a, #0x00, cont_s_dec
     mov soak_temp_hund, #0x20
     mov soak_temp, #0x50
+    ljmp check_rtime
     cont_s_dec:
+    SUBB a, #0x10
+    da A
+    mov soak_temp_hund, a 
 	ljmp check_rtime
 
 decrement_s_hund:
     mov a, soak_temp_hund
-    SUBB a, #0x10
-    da A
-    mov soak_temp_hund, A
-    mov a, Soak_temp
+    cjne a , #0x00, cont_dec
     ljmp continue_dec_s
 
 check_rtime:
@@ -380,33 +377,31 @@ add_hundreds_r:
     mov a, Reflow_temp
     ljmp cont_r
 
+
 Reflow_temp_decrement: 
 	mov a, Reflow_temp
 	add a, #0x99
 	da a
 	mov Reflow_temp, a
-    cjne a, #0x00, continue_dec_r
+    cjne a, #0x00, skipp
     ljmp decrement_r_hund
     continue_dec_r:
-	mov a, reflow_temp_100
-    cjne a, #0x20, cont_dec ;make sure to check with 20 since the hundreds place value is multiplied by 10
-	mov a, reflow_temp
-    cjne a, #0x50, skipp
-    mov a, #0x20
-    mov reflow_temp, a
-    mov a, reflow_temp_100
-    mov a, #0x50
-	mov Reflow_temp_100, a
+	;mov a, reflow_temp
+    ;cjne a, #0x00, skipp
+    mov reflow_temp, #0x50
+    mov reflow_temp_100, #0x20
+    ljmp skipp
     cont_dec:
+    SUBB a, #0x10
+    da a
+    mov reflow_temp_100, a
 	ljmp skipp
 
     decrement_r_hund:
     mov a, reflow_temp_100
-    SUBB a, #0x10
-    da A
-    mov reflow_temp_100, a
-    mov a, reflow_temp
+    cjne a, #0x00, cont_dec
     ljmp continue_dec_r
+
 skipp:
 	ret
 
