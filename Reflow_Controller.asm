@@ -674,19 +674,19 @@ state_1_loop:
 
 state_2:
 	lcall display_blank 
-	mov a, seconds
-	mov a, #0x00
-	mov seconds, a
+	mov seconds, #0x00
 	Set_Cursor(1,1)
 	Send_Constant_String(#soaking)
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
+	Set_Cursor(2, 14)
+	display_BCD(soak_time)
 state_2_loop: 
 	Set_Cursor(2,6)
 	display_BCD(seconds)
 	mov x, seconds 
 	lcall hex2bcd 
-	display_BCD(bcd+2)
+	display_BCD(bcd)
 	mov pwm, #20
 	ljmp state_2_loop
 	ljmp Forever
