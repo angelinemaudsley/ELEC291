@@ -1,3 +1,14 @@
+; *****TODO*****
+; link state 2 -> 3
+; state 2 -> 3, 4 -> 5 check secs
+; state 3 -> 4, 5 -> 0 check temp
+
+; ******BONUS*******
+; add button to change C <-> F
+; python !!
+
+
+
 ; N76E003 LCD_Pushbuttons.asm: Reads muxed push buttons using one input
 
 $NOLIST
