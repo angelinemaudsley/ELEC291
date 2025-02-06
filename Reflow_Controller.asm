@@ -217,9 +217,10 @@ LCD_PB:
 	jb P1.5, LCD_PB_Done
 
 	; Debounce
-	mov R2, #50
-	lcall waitms
 	jb P1.5, LCD_PB_Done
+	Wait_Milli_Seconds(#50)
+	jb P1.5, LCD_PB_Done
+	jb P1.5, $
 
 	; Set the LCD data pins to logic 1
 	setb P0.0
