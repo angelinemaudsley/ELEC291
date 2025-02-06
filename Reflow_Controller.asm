@@ -601,7 +601,7 @@ check_currenttemp:
 	ret
 safety_feature:
 	mov a, seconds
-	cjne a, #0x60, skipp1
+	cjne a, #0x3C, skipp1
 	jb temp_flag, skipp1
 	lcall display_blank
 	mov pwm, #0
