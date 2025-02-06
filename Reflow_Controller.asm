@@ -645,23 +645,42 @@ display_ready:
     Send_Constant_String(#ready_to_open)
     ret
 
+; checks secs for state 2 -> 3
+check_sec_s2:
+	;************************ to be done later
+	ret
+
 ; checks temp for state 3 -> 4
 check_temp_s3:
 	mov a, current_temp 
-	cjne a, Soak_temp, skipp1
+	cjne a, Reflow_temp, skipp1
 	mov a, current_temp_hund
-	mov x, soak_temp_hund 
-	load_y(10)				; might need to fix
-	lcall div32 			; might need to fix
-	mov soak_temp_hund, x
-	cjne a, soak_temp_hund, skipp1
+	mov x, reflow_temp_100 
+	load_y(10)	
+	lcall div32 
+	mov reflow_temp_100, x
+	cjne a, reflow_temp_100, skipp1
 	mov STATE, #0x03
 	ret
 
-; checks secs for state 2 -> 3
-check_sec_s2:
+; checks secs for state 4 -> 5
+check_sec_s4:
+	;************************ to be done later
 	ret
 
+; checks temp for state 5 -> 0
+;**********************************is this reflow or soak?
+check_temp_s5:
+	mov a, current_temp 
+	cjne a, Reflow_temp, skipp1
+	mov a, current_temp_hund
+	mov x, reflow_temp_100 
+	load_y(10)	
+	lcall div32 
+	mov reflow_temp_100, x
+	cjne a, reflow_temp_100, skipp1
+	mov STATE, #0x05
+	ret
 
 main:
 	mov sp, #0x7f
@@ -682,7 +701,6 @@ main:
     mov pwm_counter, #0x00
     mov pwm, #0x00
     mov reflow_temp_100, #0x00
-    mov soak_temp_hund, #0x00
     clr decrement1
     clr s_flag 
 	
@@ -749,40 +767,32 @@ state_2_loop:
 	display_BCD(bcd)
 	mov pwm, #20
 	lcall check_secs_s2
-    lcall safety_feature
-    mov R2, #250
-    lcall waitms
-    mov R2, #250
-    lcall waitms
 	mov a, STATE
     cjne a, #2, state_3
 	ljmp state_2_loop
-	
+
 state_3:
     lcall display_blank
     mov seconds, #0x00
     Set_Cursor(1,1)
     Send_Constant_String(#reflowing)
     Set_Cursor(2,1)
-    Send_Constant_String(#time)
     Set_Cursor(1,14)
     display_BCD(reflow_time)
 
 state_3_loop:
-    Set_Cursor(2,6)
-    mov x, seconds
-    lcall hex2bcd
-    display_BCD(bcd)
-    mov pwm, #0
-    lcall check_temp_s3
-    lcall safety_feature
-    mov R2, #250
-    lcall waitms
-    mov R2, #250
-    lcall waitms
     mov a, STATE
-    cjne a, #3, state_4
-    ljmp state_3_loop
+	cjne a, #3, state_4
+	lcall display_heating
+	mov pwm, #0
+	lcall outside_tmp
+	lcall oven_tmp
+	lcall check_temp_s3
+    mov R2, #250
+	lcall waitms
+	mov R2, #250
+	lcall waitms
+	ljmp state_3_loop
 
 state_4:
     lcall display_blank
@@ -801,8 +811,7 @@ state_4_loop:
     lcall hex2bcd
     display_BCD(bcd)
     mov pwm, #20
-    lcall check_temps
-    lcall safety_feature
+	lcall check_secs_s4
     mov R2, #250
     lcall waitms
     mov R2, #250
@@ -820,10 +829,14 @@ state_5:
     Send_Constant_String(#ready_to_open)
     
 state_5_loop:
+	mov a, STATE
+	cjne a, #5, state_0_near
+	lcall display_heating
     mov pwm, #0
     lcall display_ready
-    mov a, STATE
-    cjne a, #5, state_0_near
+	lcall outside_tmp
+	lcall oven_tmp
+	lcall check_temp_s5
     sjmp state_5_loop
 
 state_0_near:
