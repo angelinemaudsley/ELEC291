@@ -91,6 +91,3 @@ text_box = ax.text(0.7, 0.9, "", transform=ax.transAxes, fontsize=14,
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
 plt.show()
-
-
-
