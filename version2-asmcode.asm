@@ -1,5 +1,5 @@
 ; *****TODO*****
-; link state 2 -> 3
+; new check temp func for state 3
 ; state 2 -> 3, 4 -> 5 check secs
 ; state 3 -> 4, 5 -> 0 check temp
 
@@ -636,6 +636,9 @@ display_ready:
     Send_Constant_String(#ready_to_open)
     ret
 
+check_temp_s3:
+	; ***************for state 3 ***************
+
 main:
 	mov sp, #0x7f
 	lcall Init_All
@@ -661,11 +664,13 @@ main:
 	
 Forever:
 	lcall display_blank
+
 state_0:
 	Set_Cursor(1, 1)
 	Send_Constant_String(#soak_param)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#reflow_param)
+
 state_0_loop:
 	mov a, STATE
         mov pwm, #100
@@ -675,6 +680,7 @@ state_0_loop:
 	lcall display_menu
 	lcall Check_start
 	ljmp state_0_loop
+
 state_1: 
 	lcall display_blank
 	mov a, seconds
@@ -684,6 +690,7 @@ state_1:
 	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
@@ -709,6 +716,7 @@ state_2:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
+
 state_2_loop: 
 	Set_Cursor(2,6)
 	display_BCD(seconds)
@@ -716,11 +724,15 @@ state_2_loop:
 	lcall hex2bcd 
 	display_BCD(bcd)
 	mov pwm, #20
+	lcall check_temps
+    lcall safety_feature
+    mov R2, #250
+    lcall waitms
+    mov R2, #250
+    lcall waitms
+	mov a, STATE
+    cjne a, #2, state_3
 	ljmp state_2_loop
-	ljmp Forever
-	
-; link state 2 to state 3
-	
 	
 state_3:
     lcall display_blank
@@ -734,12 +746,11 @@ state_3:
 
 state_3_loop:
     Set_Cursor(2,6)
-    display_BCD(seconds)
     mov x, seconds
     lcall hex2bcd
     display_BCD(bcd)
     mov pwm, #0
-    lcall check_temps
+    lcall check_temp_s3
     lcall safety_feature
     mov R2, #250
     lcall waitms
@@ -793,5 +804,5 @@ state_5_loop:
 
 state_0_near:
     ljmp state_0
-END
 
+END

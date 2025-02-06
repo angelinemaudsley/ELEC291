@@ -58,6 +58,15 @@ LCD_D6 equ P0.2
 LCD_D7 equ P0.3
 ;ADC_pn equ P1.1
 
+; new variables
+reflowing:         db    'Reflowing...', 0
+cooling:           db    'Cooling...', 0
+cooling_time:      db    'Cool Time:xxs', 0
+cooldown_complete: db    'Cooldown Done', 0
+ready_to_open:     db    'Ready to Open', 0
+
+
+
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
@@ -610,6 +619,18 @@ safety_feature:
 safety_feature_loop:
 	ljmp safety_feature_loop
 
+; new function
+display_ready:
+    Set_Cursor(1, 1)
+    Send_Constant_String(#cooldown_complete)
+    Set_Cursor(2, 1)
+    Send_Constant_String(#ready_to_open)
+    ret
+
+check_temp_s3:
+	; ***************for state 3 ***************
+
+
 main:
 	mov sp, #0x7f
 	lcall Init_All
@@ -693,5 +714,77 @@ state_2_loop:
 	ljmp state_2_loop
 	ljmp Forever
 	
+	
+state_3:
+    lcall display_blank
+    mov seconds, #0x00
+    Set_Cursor(1,1)
+    Send_Constant_String(#reflowing)
+    Set_Cursor(2,1)
+    Send_Constant_String(#time)
+    Set_Cursor(1,14)
+    display_BCD(reflow_time)
+
+state_3_loop:
+    Set_Cursor(2,6)
+    mov x, seconds
+    lcall hex2bcd
+    display_BCD(bcd)
+    mov pwm, #0
+    lcall check_temp_s3
+    lcall safety_feature
+    mov R2, #250
+    lcall waitms
+    mov R2, #250
+    lcall waitms
+    mov a, STATE
+    cjne a, #3, state_4
+    ljmp state_3_loop
+
+state_4:
+    lcall display_blank
+    mov seconds, #0x00
+    Set_Cursor(1,1)
+    Send_Constant_String(#cooling)
+    Set_Cursor(2,1)
+    Send_Constant_String(#time)
+    Set_Cursor(1,14)
+    display_BCD(cooling_time)
+
+state_4_loop:
+    Set_Cursor(2,6)
+    display_BCD(seconds)
+    mov x, seconds
+    lcall hex2bcd
+    display_BCD(bcd)
+    mov pwm, #20
+    lcall check_temps
+    lcall safety_feature
+    mov R2, #250
+    lcall waitms
+    mov R2, #250
+    lcall waitms
+    mov a, STATE
+    cjne a, #4, state_5
+    ljmp state_4_loop
+
+state_5:
+    lcall display_blank
+    mov seconds, #0x00
+    Set_Cursor(1,1)
+    Send_Constant_String(#cooldown_complete)
+    Set_Cursor(2,1)
+    Send_Constant_String(#ready_to_open)
+    
+state_5_loop:
+    mov pwm, #0
+    lcall display_ready
+    mov a, STATE
+    cjne a, #5, state_0_near
+    sjmp state_5_loop
+
+state_0_near:
+    ljmp state_0
+
 END
 	
