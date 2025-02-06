@@ -185,7 +185,7 @@ waitms:
 	lcall wait_1ms
 	djnz R2, waitms
 	ret
-	
+
 Timer2_ISR:
 	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is bit addressable.
 	push psw
@@ -651,8 +651,8 @@ check_temp_s3:
 	cjne a, Soak_temp, skipp1
 	mov a, current_temp_hund
 	mov x, soak_temp_hund 
-	load_y(10)
-	lcall div32 
+	load_y(10)				; might need to fix
+	lcall div32 			; might need to fix
 	mov soak_temp_hund, x
 	cjne a, soak_temp_hund, skipp1
 	mov STATE, #0x03
@@ -725,7 +725,7 @@ state_1_loop:
 	lcall check_currenttemp
 	lcall safety_feature
 	lcall check_temps
-    	mov R2, #250
+    mov R2, #250
 	lcall waitms
 	mov R2, #250
 	lcall waitms
@@ -830,4 +830,3 @@ state_0_near:
     ljmp state_0
 
 END
-	
