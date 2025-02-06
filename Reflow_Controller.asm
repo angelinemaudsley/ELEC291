@@ -768,12 +768,11 @@ state_2_loop:
 	mov pwm, #20
 	lcall check_secs_s2
 	mov a, STATE
-    cjne a, #2, state_3
+        cjne a, #2, state_3
 	ljmp state_2_loop
 
 state_3:
     lcall display_blank
-    mov seconds, #0x00
     Set_Cursor(1,1)
     Send_Constant_String(#reflowing)
     Set_Cursor(2,1)
