@@ -437,13 +437,13 @@ display_menu:
 
 display_heating:
 	Set_Cursor(1,4)
-	Display_BCD(Soak_temp_hund); change this one****
+	Display_BCD(Soak_temp_hund)
 	set_cursor(1,5)
 	display_bcd(soak_temp)
 	Set_Cursor(1,12)
 	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
-	Display_BCD3(current_temp); change this one****
+	Display_BCD(current_temp)
 	ret
 
 display_blank:
