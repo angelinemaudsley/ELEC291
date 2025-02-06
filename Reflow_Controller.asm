@@ -617,7 +617,7 @@ main:
      ; initial messages in LCD
     mov STATE, #0x00
     mov Soak_time, #0x00
-    mov Soak_temp, #0x40
+    mov Soak_temp, #0x00
     mov soak_temp_hund, #0x00
     mov Reflow_time, #0x00
     mov Reflow_temp, #0x00
