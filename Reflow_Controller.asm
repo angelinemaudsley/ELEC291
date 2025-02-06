@@ -191,9 +191,6 @@ Timer2_ISR:
 	cjne a, #100, Timer2_ISR_done
 	mov pwm_counter, #0
 	inc seconds ; It is super easy to keep a seconds count here
-	mov a, seconds
-	da a
-	mov seconds, a
 	setb s_flag
 
 Timer2_ISR_done:
