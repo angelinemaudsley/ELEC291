@@ -44,7 +44,8 @@ reflow_param:db    'Reflow: xxs xxxC', 0
 heating_to:  db    'Ts:xxxC To:xxxC', 0
 heating_temp:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
-safety_message:db  'Cant Read Temp', 0
+safety_message:db  'ERROR: ', 0
+safety_message1:db  'Cant Read Temp
 soaking:db         'Soaking time', 0
 time:db            'Time:xxs',0
 
@@ -607,6 +608,8 @@ safety_feature:
 	mov pwm, #0
 	Set_Cursor(1,1)
 	Send_Constant_String(#safety_message)
+	Set_Cursor(2,1)
+	Send_Constant_String(#safety_message1)
 safety_feature_loop:
 	ljmp safety_feature_loop
 
