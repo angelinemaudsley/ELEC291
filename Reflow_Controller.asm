@@ -679,7 +679,7 @@ state_2:
 	Send_Constant_String(#soaking)
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
-	Set_Cursor(2, 14)
+	Set_Cursor(1, 14)
 	display_BCD(soak_time)
 state_2_loop: 
 	Set_Cursor(2,6)
