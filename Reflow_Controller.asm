@@ -185,6 +185,7 @@ waitms:
 	lcall wait_1ms
 	djnz R2, waitms
 	ret
+	
 Timer2_ISR:
 	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is bit addressable.
 	push psw
@@ -298,6 +299,7 @@ check_stemp:
 	mov Soak_temp, a
     cjne a, #0x99, cont_s
     ljmp add_hund_s
+
     cont_s:
     mov a, soak_temp_hund
 	cjne a, #0x20, fini
@@ -308,6 +310,7 @@ check_stemp:
     mov a, soak_temp_hund
     mov a, #0x00
     mov soak_temp_hund, a
+
     fini:
 	ljmp check_rtime
 
@@ -325,11 +328,13 @@ Soak_temp_decrement:
 	da a
 	mov Soak_temp, a
     cjne a, #0x00, check_rtime
-    ljmp decrement_s_hund    
+    ljmp decrement_s_hund   
+
     continue_dec_s:
     mov soak_temp_hund, #0x20
     mov soak_temp, #0x50
     ljmp check_rtime
+
     cont_s_dec:
     SUBB a, #0x10
     da A
@@ -366,6 +371,7 @@ check_rtemp:
     mov Reflow_temp, a
 	cjne a, #0x99, cont_r
     ljmp add_hundreds_r
+
     cont_r:
     ;check hundreds
     mov a, reflow_temp_100
@@ -396,12 +402,14 @@ Reflow_temp_decrement:
 	mov Reflow_temp, a
     cjne a, #0x00, skipp
     ljmp decrement_r_hund
+
     continue_dec_r:
 	;mov a, reflow_temp
     ;cjne a, #0x00, skipp
     mov reflow_temp, #0x50
     mov reflow_temp_100, #0x20
     ljmp skipp
+
     cont_dec:
     SUBB a, #0x10
     da a
@@ -423,6 +431,7 @@ Check_start:
 	jnb START_BUTTON, $		; Wait for button release.  The '$' means: jump to same instruction.
 	mov STATE, #0x01
 	ret
+
 smjmp:
 ljmp skipp
 
@@ -475,18 +484,21 @@ conv_to_bcd_high:
     swap a
     anl a, #0x0f
     mov R1, a
-ret
+	ret
+
 conv_to_bcd_low:
     anl a, #0x0f
     mov R0, A
-ret
+	ret
+
 conv_to_bcd:
 	mov x+0, R0
 	mov x+1, R1
 	mov x+2, #0
 	mov x+3, #0
     lcall hex2bcd
-ret
+	ret
+
 Outside_tmp:
     anl ADCCON0, #0xF0
 	orl ADCCON0, #0x07 ; Select channel 7 
@@ -590,6 +602,7 @@ display_oven_tmp:
 	Display_char(#'.')
 	Display_BCD(bcd+1)
 	ret
+
 skipp1:
 	ret
 
@@ -604,11 +617,13 @@ check_temps:
 	cjne a, soak_temp_hund, skipp1
 	mov STATE, #0x02
 	ret
+
 check_currenttemp:
 	mov a, current_temp
 	cjne a, #0x60, skipp1
 	setb temp_flag
 	ret
+
 safety_feature:
 	mov a, seconds
 	cjne a, #0x3C, skipp1
@@ -619,10 +634,10 @@ safety_feature:
 	Send_Constant_String(#safety_message)
 	Set_Cursor(2,1)
 	Send_Constant_String(#safety_message1)
+
 safety_feature_loop:
 	ljmp safety_feature_loop
 
-; new function
 display_ready:
     Set_Cursor(1, 1)
     Send_Constant_String(#cooldown_complete)
@@ -630,8 +645,22 @@ display_ready:
     Send_Constant_String(#ready_to_open)
     ret
 
+; checks temp for state 3 -> 4
 check_temp_s3:
-	; ***************for state 3 ***************
+	mov a, current_temp 
+	cjne a, Soak_temp, skipp1
+	mov a, current_temp_hund
+	mov x, soak_temp_hund 
+	load_y(10)
+	lcall div32 
+	mov soak_temp_hund, x
+	cjne a, soak_temp_hund, skipp1
+	mov STATE, #0x03
+	ret
+
+; checks secs for state 2 -> 3
+check_sec_s2:
+	ret
 
 
 main:
@@ -659,11 +688,13 @@ main:
 	
 Forever:
 	lcall display_blank
+
 state_0:
 	Set_Cursor(1, 1)
 	Send_Constant_String(#soak_param)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#reflow_param)
+
 state_0_loop:
 	mov a, STATE
         mov pwm, #100
@@ -673,6 +704,7 @@ state_0_loop:
 	lcall display_menu
 	lcall Check_start
 	ljmp state_0_loop
+
 state_1: 
 	lcall display_blank
 	mov a, seconds
@@ -682,6 +714,7 @@ state_1:
 	Send_Constant_String(#heating_to)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
@@ -707,6 +740,7 @@ state_2:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
+
 state_2_loop: 
 	Set_Cursor(2,6)
 	display_BCD(seconds)
@@ -714,9 +748,15 @@ state_2_loop:
 	lcall hex2bcd 
 	display_BCD(bcd)
 	mov pwm, #20
+	lcall check_secs_s2
+    lcall safety_feature
+    mov R2, #250
+    lcall waitms
+    mov R2, #250
+    lcall waitms
+	mov a, STATE
+    cjne a, #2, state_3
 	ljmp state_2_loop
-	ljmp Forever
-	
 	
 state_3:
     lcall display_blank
