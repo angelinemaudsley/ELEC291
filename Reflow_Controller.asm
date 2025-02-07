@@ -605,11 +605,18 @@ display_oven_tmp:
 
 skipp1:
 	ret
+clearx:
+	mov x+0, #0x00
+	mov x+1, #0x00
+	mov x+2, #0x00
+	mov x+3, #0x00
+	ret 
 
 check_temps:
 	mov a, current_temp 
 	cjne a, Soak_temp, skipp1
 	mov a, current_temp_hund
+	lcall clearx
 	mov x, soak_temp_hund 
 	load_y(10)
 	lcall div32 
@@ -762,6 +769,7 @@ state_2:
 state_2_loop: 
 	Set_Cursor(2,6)
 	display_BCD(seconds)
+	lcall clearx
 	mov x, seconds 
 	lcall hex2bcd 
 	display_BCD(bcd)
