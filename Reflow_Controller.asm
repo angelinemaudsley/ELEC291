@@ -41,13 +41,16 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to:  db    'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: xxxC', 0
+heating_to_s:  db    'Ts:xxxC To:xxxC', 0
+heating_temp_s:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
-soaking:db         'Soaking time', 0
+soaking:db         'Soaking time:', 0
+reflow:db          'Reflow Time:',0
 time:db            'Time:xxs',0
+heating_to_r:  db    'Tr:xxxC To:xxxC', 0
+heating_temp_r:db    'Temp: xxxC', 0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -455,11 +458,22 @@ display_menu:
     display_bcd(reflow_temp)
     ret
 
-display_heating:
+display_heating_s:
 	Set_Cursor(1,4)
 	Display_BCD(Soak_temp_hund)
 	set_cursor(1,5)
 	display_bcd(soak_temp)
+	Set_Cursor(1,12)
+	Display_BCD(outside_temp)
+	Set_Cursor(2,7)
+	Display_BCD(current_temp)
+	ret
+
+display_heating_r:
+	Set_Cursor(1,4)
+	Display_BCD(reflow_temp_100)
+	set_cursor(1,5)
+	display_bcd(reflow_temp)
 	Set_Cursor(1,12)
 	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
@@ -658,20 +672,23 @@ display_ready:
 
 ; checks secs for state 2 -> 3
 check_sec_s2:
-	;************************ to be done later
+	mov a, soak_time
+	cjne soak_time, seconds, skipp
+	mov state, #3
 	ret
 
 ; checks temp for state 3 -> 4
-check_temp_s3:
+check_temps_s3:
 	mov a, current_temp 
 	cjne a, Reflow_temp, skipp1
 	mov a, current_temp_hund
+	lcall clearx
 	mov x, reflow_temp_100 
 	load_y(10)	
 	lcall div32 
 	mov reflow_temp_100, x
 	cjne a, reflow_temp_100, skipp1
-	mov STATE, #0x03
+	mov STATE, #0x04
 	ret
 
 ; checks secs for state 4 -> 5
@@ -736,18 +753,16 @@ state_0_loop:
 
 state_1: 
 	lcall display_blank
-	mov a, seconds
-	mov a, #0x00
-	mov seconds, a
+	mov seconds, #0x00
 	Set_Cursor(1, 1)
-	Send_Constant_String(#heating_to)
+	Send_Constant_String(#heating_to_s)
 	Set_Cursor(2, 1)
-	Send_Constant_String(#heating_temp)
+	Send_Constant_String(#heating_temp_s)
 
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
-	lcall display_heating
+	lcall display_heating_s
 	mov pwm, #0
 	lcall outside_tmp
 	lcall oven_tmp
@@ -769,6 +784,8 @@ state_2:
 	display_BCD(soak_time)
 
 state_2_loop: 
+	mov a, STATE
+        cjne a, #2, state_3
 	Set_Cursor(2,6)
 	display_BCD(seconds)
 	lcall clearx
@@ -777,41 +794,36 @@ state_2_loop:
 	display_BCD(bcd)
 	mov pwm, #20
 	lcall check_secs_s2
-	mov a, STATE
-        cjne a, #2, state_3
 	ljmp state_2_loop
 
 state_3:
-    lcall display_blank
-    Set_Cursor(1,1)
-    Send_Constant_String(#reflowing)
-    Set_Cursor(2,1)
-    Set_Cursor(1,14)
-    display_BCD(reflow_time)
+	lcall display_blank
+	Set_Cursor(1, 1)
+	Send_Constant_String(#heating_to_r)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#heating_temp_r)
 
 state_3_loop:
-    mov a, STATE
+	mov a, STATE
 	cjne a, #3, state_4
-	lcall display_heating
+	lcall display_heating_r
 	mov pwm, #0
 	lcall outside_tmp
 	lcall oven_tmp
-	lcall check_temp_s3
-    mov R2, #250
-	lcall waitms
+	lcall check_temps_s3
 	mov R2, #250
 	lcall waitms
 	ljmp state_3_loop
 
 state_4:
-    lcall display_blank
-    mov seconds, #0x00
-    Set_Cursor(1,1)
-    Send_Constant_String(#cooling)
-    Set_Cursor(2,1)
-    Send_Constant_String(#time)
-    Set_Cursor(1,14)
-    display_BCD(cooling_time)
+	lcall display_blank 
+	mov seconds, #0x00
+	Set_Cursor(1,1)
+	Send_Constant_String(#reflow)
+	Set_Cursor(2,1)
+	Send_Constant_String(#time)
+	Set_Cursor(1, 14)
+	display_BCD(soak_time)
 
 state_4_loop:
     Set_Cursor(2,6)
