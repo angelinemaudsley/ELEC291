@@ -41,16 +41,16 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to_s:  db    'Ts:xxxC To:xxxC', 0
-heating_temp_s:db    'Temp: xxxC', 0
+heating_to_s:  db   'Ts:xxxC To:xxxC', 0
+heating_temp:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
 soaking:db         'Soaking time:', 0
 reflow:db          'Reflow Time:',0
 time:db            'Time:xxs',0
-heating_to_r:  db    'Tr:xxxC To:xxxC', 0
-heating_temp_r:db    'Temp: xxxC', 0
+heating_to_r:db    'Tr:xxxC To:xxxC', 0
+cooling:db         'Cooling down...', 0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -663,13 +663,6 @@ safety_feature:
 safety_feature_loop:
 	ljmp safety_feature_loop
 
-display_ready:
-    Set_Cursor(1, 1)
-    Send_Constant_String(#cooldown_complete)
-    Set_Cursor(2, 1)
-    Send_Constant_String(#ready_to_open)
-    ret
-
 ; checks secs for state 2 -> 3
 check_sec_s2:
 	mov a, soak_time
@@ -693,22 +686,14 @@ check_temps_s3:
 
 ; checks secs for state 4 -> 5
 check_sec_s4:
-	;************************ to be done later
+	mov a, reflow_time
+	cjne reflow_time, seconds, skipp
+	mov state, #5
 	ret
 
-; checks temp for state 5 -> 0
-;**********************************is this reflow or soak?
+; checks temp for state 5 -> safe temperature
 check_temp_s5:
-	mov a, current_temp 
-	cjne a, Reflow_temp, skipp1
-	mov a, current_temp_hund
-	mov x, reflow_temp_100 
-	load_y(10)	
-	lcall div32 
-	mov reflow_temp_100, x
-	cjne a, reflow_temp_100, skipp1
-	mov STATE, #0x05
-	ret
+	;****************myles do this. make the state equal 6 when it is less then 60 celsius 
 
 main:
 	mov sp, #0x7f
@@ -757,7 +742,7 @@ state_1:
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to_s)
 	Set_Cursor(2, 1)
-	Send_Constant_String(#heating_temp_s)
+	Send_Constant_String(#heating_temp)
 
 state_1_loop:
 	mov a, STATE
@@ -787,7 +772,6 @@ state_2_loop:
 	mov a, STATE
         cjne a, #2, state_3
 	Set_Cursor(2,6)
-	display_BCD(seconds)
 	lcall clearx
 	mov x, seconds 
 	lcall hex2bcd 
@@ -801,7 +785,7 @@ state_3:
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to_r)
 	Set_Cursor(2, 1)
-	Send_Constant_String(#heating_temp_r)
+	Send_Constant_String(#heating_temp)
 
 state_3_loop:
 	mov a, STATE
@@ -826,41 +810,36 @@ state_4:
 	display_BCD(soak_time)
 
 state_4_loop:
+    mov a, STATE
+    cjne a, #4, state_5
     Set_Cursor(2,6)
-    display_BCD(seconds)
     mov x, seconds
     lcall hex2bcd
     display_BCD(bcd)
     mov pwm, #20
-	lcall check_secs_s4
-    mov R2, #250
-    lcall waitms
-    mov R2, #250
-    lcall waitms
-    mov a, STATE
-    cjne a, #4, state_5
+    lcall check_secs_s4
     ljmp state_4_loop
 
 state_5:
     lcall display_blank
-    mov seconds, #0x00
     Set_Cursor(1,1)
-    Send_Constant_String(#cooldown_complete)
+    Send_Constant_String(#cooling)
     Set_Cursor(2,1)
-    Send_Constant_String(#ready_to_open)
+    Send_Constant_String(#heating_temp)
     
 state_5_loop:
 	mov a, STATE
-	cjne a, #5, state_0_near
-	lcall display_heating
-    mov pwm, #0
-    lcall display_ready
+	cjne a, #5, state_6
+	mov pwm, #100
+	Set_Cursor(2,7)
+	Display_BCD(current_temp)
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temp_s5
-    sjmp state_5_loop
+	mov R2, #250
+	lcall waitms
+	sjmp state_5_loop
 
-state_0_near:
-    ljmp state_0
+state_6:
 
 END
