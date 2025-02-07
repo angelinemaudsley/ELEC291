@@ -750,8 +750,6 @@ state_1_loop:
 	lcall check_currenttemp
 	lcall safety_feature
 	lcall check_temps
-    mov R2, #250
-	lcall waitms
 	mov R2, #250
 	lcall waitms
 	ljmp state_1_loop
