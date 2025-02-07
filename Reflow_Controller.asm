@@ -45,7 +45,7 @@ heating_to:  db    'Ts:xxxC To:xxxC', 0
 heating_temp:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
-safety_message1:db  'Cant Read Temp
+safety_message1:db  'Cant Read Temp'
 soaking:db         'Soaking time', 0
 time:db            'Time:xxs',0
 
@@ -608,13 +608,17 @@ skipp1:
 
 check_temps:
 	mov a, current_temp 
-	cjne a, Soak_temp, skipp1
+	cjne a, Soak_temp, next1 ; want to use carry bit from cjne so arbitrary jump
+next1:
+	jc skipp1 ; skip if current_temp < soak_temp (carry bit set)
 	mov a, current_temp_hund
 	mov x, soak_temp_hund 
 	load_y(10)
 	lcall div32 
 	mov soak_temp_hund, x
-	cjne a, soak_temp_hund, skipp1
+	cjne a, soak_temp_hund, next2 ; want to use carry bit from cjne operation so arbitrary jump
+next2:
+	jc skipp1 ; skip if soak_temp_hund < next2
 	mov STATE, #0x02
 	ret
 
