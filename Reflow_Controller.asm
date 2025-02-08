@@ -683,19 +683,17 @@ check_sec_s4:
 	mov state, #5
 	ret
 
-; checks temp for state 5 -> safe temperature
+; checks temp for state 5 -> 0
 check_temp_s5:
-	;****************myles do this. make the state equal 6 when it is less then 60 celsius 
-;Rowa + Helen's check for state 5 to 6
     mov a, current_temp      
     mov b, #60                 
     cjne a, b, check_high       
-    ljmp skip_s5_to_s6         
+    ljmp skip_s5_to_s0         
 check_high:
-    jb a.7, skip_s5_to_s6      ; check MSB for negative/overflow
-    mov STATE, #0x06           ; Set state to 6 (Finished)
+    jb a.7, skip_s5_to_s0      ; check MSB for negative/overflow
+    mov STATE, #0x00           ; Set state to 0 (Finished)
     ret                        ; Return
-skip_s5_to_s6:
+skip_s5_to_s0:
     ret                        ; Return without state change
 
 main:
