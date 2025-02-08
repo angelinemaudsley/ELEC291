@@ -62,14 +62,6 @@ LCD_D6 equ P0.2
 LCD_D7 equ P0.3
 ;ADC_pn equ P1.1
 
-; new variables
-reflowing:         db    'Reflowing...', 0
-cooling:           db    'Cooling...', 0
-cooling_time:      db    'Cool Time:xxs', 0
-cooldown_complete: db    'Cooldown Done', 0
-ready_to_open:     db    'Ready to Open', 0
-
-
 
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
