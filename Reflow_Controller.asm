@@ -686,9 +686,7 @@ check_sec_s4:
 ; checks temp for state 5 -> safe temperature
 check_temp_s5:
 	;****************myles do this. make the state equal 6 when it is less then 60 celsius 
-
 ;Rowa + Helen's check for state 5 to 6
-check_temps_s5:
     mov a, current_temp      
     mov b, #60                 
     cjne a, b, check_high       
