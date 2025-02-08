@@ -658,7 +658,7 @@ safety_feature_loop:
 ; checks secs for state 2 -> 3
 check_sec_s2:
 	mov a, soak_time
-	cjne soak_time, seconds, skipp
+	cjne a, seconds, skipp
 	mov state, #3
 	ret
 
@@ -679,7 +679,7 @@ check_temps_s3:
 ; checks secs for state 4 -> 5
 check_sec_s4:
 	mov a, reflow_time
-	cjne reflow_time, seconds, skipp
+	cjne a, seconds, skipp
 	mov state, #5
 	ret
 
@@ -842,7 +842,5 @@ state_5_loop:
 	mov R2, #250
 	lcall waitms
 	sjmp state_5_loop
-
-state_6:
 
 END
