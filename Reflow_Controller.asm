@@ -42,7 +42,7 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
 heating_to_s:  db   'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: xxxC', 0
+heating_temp:db    'Temp: ', 0;heating_temp:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
@@ -229,7 +229,7 @@ LCD_PB:
 	jb P1.5, $
 
 	; Set the LCD data pins to logic 1
-	setb P0.0      
+	setb P0.0
 	setb P0.1
 	setb P0.2
 	setb P0.3
@@ -451,10 +451,10 @@ display_menu:
     ret
 
 display_heating_s:
-	Set_Cursor(1,4)
-	Display_BCD(Soak_temp_hund)
-	set_cursor(1,5)
-	display_bcd(soak_temp)
+	;Set_Cursor(1,4)
+	;Display_BCD(Soak_temp_hund)
+	;set_cursor(1,5)
+	;display_bcd(soak_temp)
 	Set_Cursor(1,12)
 	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
@@ -598,7 +598,13 @@ oven_tmp:
     lcall display_oven_tmp
     mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
-    
+	;lcall clearx
+	;mov x, current_temp_hund
+	;load_y(10)
+	;lcall div32
+	;mov current_temp_hund, x
+	
+
 ret
 
 display_oven_tmp:
@@ -607,6 +613,15 @@ display_oven_tmp:
 	Display_BCD(bcd+2)
 	Display_char(#'.')
 	Display_BCD(bcd+1)
+	
+	set_cursor(2,15)
+	display_BCD(soak_temp_hund)
+	set_cursor(2,13)
+	display_BCD(current_temp_hund)
+	;display_bcd(bcd+3)
+	;Display_BCD(bcd+2)
+	;Display_char(#'.')
+	;Display_BCD(bcd+1)
 	ret
 
 skipp1:
@@ -622,17 +637,12 @@ check_temps:
 	mov a, current_temp 
 	cjne a, Soak_temp, next1 ; want to use carry bit from cjne so arbitrary jump
 next1:
+	;soak temp is 10 for 100, current temp is 1 for 100 
 	jc skipp1 ; skip if current_temp < soak_temp (carry bit set)
 	mov a, current_temp_hund
-	lcall clearx
-	mov x, soak_temp_hund 
-	load_y(10)
-	lcall div32 
-	mov soak_temp_hund, x
-	cjne a, soak_temp_hund, next2 ; want to use carry bit from cjne operation so arbitrary jump
-next2:
-	jc skipp1 ; skip if soak_temp_hund < next2
+	cjne a, soak_temp_hund, next2
 	mov STATE, #0x02
+next2:
 	ret
 
 check_currenttemp:
@@ -644,7 +654,7 @@ check_currenttemp:
 safety_feature:
 	mov a, seconds
 	cjne a, #0x3C, skipp1
-	jb temp_flag, skipp1
+	jb temp_flag, skipp2
 	lcall display_blank
 	mov pwm, #0
 	Set_Cursor(1,1)
@@ -661,7 +671,9 @@ skipp2:
 ; checks secs for state 2 -> 3
 check_secs_s2:
     mov a, soak_time
+	da a
     cjne a, seconds, skip_check_secs_s2
+	lcall debug_display
     mov state, #3
 skip_check_secs_s2:
     ret
@@ -671,7 +683,7 @@ check_temps_s3:
 	mov a, current_temp 
 	cjne a, Reflow_temp, nxt1
 nxt1:
-	jc skipp2
+	jnc skipp2
 	mov a, current_temp_hund
 	lcall clearx
 	mov x,reflow_temp_100
@@ -705,6 +717,15 @@ check_high:
     ret                        ; return
 skip_s5_to_s0:
     ret                        ; return without state change
+
+debug_display:
+	set_cursor(1,8)
+	display_BCD(soak_time)
+	set_cursor(2,8)
+	display_bcd(seconds)
+	set_cursor(2,15)
+	display_BCD(STATE)
+ret
 
 main:
 	mov sp, #0x7f
@@ -755,6 +776,16 @@ state_1:
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
 
+	Set_Cursor(1,4)
+	Display_BCD(Soak_temp_hund)
+	set_cursor(1,5)
+	display_bcd(soak_temp)
+
+	lcall clearx
+	mov x, soak_temp_hund
+	load_y(10)
+	lcall div32
+	mov soak_temp_hund, x
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
@@ -818,7 +849,7 @@ state_4:
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
-	display_BCD(soak_time)
+	display_BCD(reflow_time)
 
 state_4_loop:
     mov a, STATE
