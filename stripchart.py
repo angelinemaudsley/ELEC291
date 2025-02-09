@@ -61,7 +61,7 @@ def run(data):
             f"Max: {max_temp:.2f}\n"
             f"Avg Temp: {avg_temp:.2f}"
         )
-
+        
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
@@ -76,6 +76,7 @@ data_gen.t = -1
 plt.style.use('dark_background')  # Dark theme for better contrast
 fig, ax = plt.subplots()
 fig.canvas.mpl_connect('close_event', on_close_figure)
+
 ax.set_facecolor('#121212')  # Dark background for better contrast
 ax.grid(color='#555555')  # Subtle grid
 line, = ax.plot([], [], lw=3, alpha=0.8)
