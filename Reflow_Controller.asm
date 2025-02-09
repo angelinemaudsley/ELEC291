@@ -655,33 +655,38 @@ safety_feature:
 safety_feature_loop:
 	ljmp safety_feature_loop
 
-; checks secs for state 2 -> 3
-check_sec_s2:
-	mov a, soak_time
-	cjne soak_time, seconds, skipp
-	mov state, #3
+skipp2:
 	ret
+
+; checks secs for state 2 -> 3
+check_secs_s2:
+    mov a, soak_time
+    cjne a, seconds, skip_check_secs_s2
+    mov state, #3
+skip_check_secs_s2:
+    ret
 
 ; checks temp for state 3 -> 4
 check_temps_s3:
 	mov a, current_temp 
-	cjne a, Reflow_temp, skipp1
+	cjne a, Reflow_temp, skipp2
 	mov a, current_temp_hund
 	lcall clearx
 	mov x, reflow_temp_100 
 	load_y(10)	
 	lcall div32 
 	mov reflow_temp_100, x
-	cjne a, reflow_temp_100, skipp1
+	cjne a, reflow_temp_100, skipp2
 	mov STATE, #0x04
 	ret
 
 ; checks secs for state 4 -> 5
-check_sec_s4:
-	mov a, reflow_time
-	cjne reflow_time, seconds, skipp
-	mov state, #5
-	ret
+check_secs_s4:
+    mov a, reflow_time
+    cjne a, seconds, skip_check_secs_s4
+    mov state, #5
+skip_check_secs_s4:
+    ret
 
 ; checks temp for state 5 -> 0
 check_temp_s5:
@@ -690,11 +695,12 @@ check_temp_s5:
     cjne a, b, check_high       
     ljmp skip_s5_to_s0         
 check_high:
-    jb a.7, skip_s5_to_s0      ; check MSB for negative/overflow
-    mov STATE, #0x00           ; Set state to 0 (Finished)
-    ret                        ; Return
+    anl a, #0x80               ; mask msb (bit 7)
+    jz skip_s5_to_s0           ; if msb = 0 skip to the end
+    mov STATE, #0x00           ; set state to 0 (finished)
+    ret                        ; return
 skip_s5_to_s0:
-    ret                        ; Return without state change
+    ret                        ; return without state change
 
 main:
 	mov sp, #0x7f
@@ -771,7 +777,7 @@ state_2:
 
 state_2_loop: 
 	mov a, STATE
-        cjne a, #2, state_3
+    cjne a, #2, state_3
 	Set_Cursor(2,6)
 	lcall clearx
 	mov x, seconds 
@@ -830,7 +836,7 @@ state_5:
     
 state_5_loop:
 	mov a, STATE
-	cjne a, #5, state_6
+	cjne a, #5, state_0_jump
 	mov pwm, #100
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
@@ -839,6 +845,9 @@ state_5_loop:
 	lcall check_temp_s5
 	mov R2, #250
 	lcall waitms
-	sjmp state_5_loop
+	ljmp state_5_loop
+
+state_0_jump:
+	ljmp state_0
 
 END
