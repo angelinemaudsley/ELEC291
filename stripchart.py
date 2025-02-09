@@ -4,7 +4,13 @@ import matplotlib.animation as animation
 import sys, time, math
 import serial
 import csv
+import pygame
 from datetime import datetime
+
+#for music
+pygame.mixer.init()
+pygame.mixer.music.load("background.mp3")  # Load music file
+pygame.mixer.music.play(-1)  # Loop music indefinitely
 
 # Configure the serial port for data input
 ser = serial.Serial(
@@ -15,7 +21,29 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS 
 )
 
+
+
 xsize = 20  # Number of data points visible on the graph at a time
+
+#Bonus feature: music played in background and pitch increases with temperature
+def set_music_pitch(temperature):
+    """Change the music playback speed based on temperature."""
+    min_temp, max_temp = 20, 50  # Define reasonable temp range
+    min_speed, max_speed = 0.8, 1.5  # Min and max pitch speed
+
+    # Normalize temperature to a range of 0-1
+    norm_temp = (temperature - min_temp) / (max_temp - min_temp)
+    norm_temp = max(0, min(norm_temp, 1))  # Keep in range 0-1
+
+    # Scale the speed accordingly
+    pitch = min_speed + (max_speed - min_speed) * norm_temp
+
+    # Apply pitch shift
+    pygame.mixer.quit()  # Reset mixer (needed for pitch changes)
+    pygame.mixer.init(frequency=int(44100 * pitch))  # Adjust pitch
+    pygame.mixer.music.load("background.mp3")
+    pygame.mixer.music.play(-1)
+
 
 # Bonus Feature: Data Logging
 csv_filename = "data_log.csv"
@@ -31,6 +59,7 @@ def data_gen():
         t += 1
         strin = ser.readline().decode('utf-8').strip()
         cool = float(strin)
+        set_music_pitch(cool)
         yield t, cool
 
 def run(data):
@@ -69,6 +98,8 @@ def run(data):
     return line,
 
 def on_close_figure(event):
+    pygame.mixer.music.stop()  # Stop music
+    pygame.mixer.quit()  # Quit pygame mixer 
     sys.exit(0)
 
 data_gen.t = -1
