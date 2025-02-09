@@ -229,7 +229,7 @@ LCD_PB:
 	jb P1.5, $
 
 	; Set the LCD data pins to logic 1
-	setb P0.0
+	setb P0.0      
 	setb P0.1
 	setb P0.2
 	setb P0.3
