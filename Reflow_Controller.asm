@@ -669,16 +669,20 @@ skip_check_secs_s2:
 ; checks temp for state 3 -> 4
 check_temps_s3:
 	mov a, current_temp 
-	cjne a, Reflow_temp, skipp2
+	cjne a, Reflow_temp, nxt1
+nxt1:
+	jc skipp2
 	mov a, current_temp_hund
 	lcall clearx
-	mov x, reflow_temp_100 
-	load_y(10)	
-	lcall div32 
+	mov x,reflow_temp_100
+	load_y(10)
+	lcall div32
 	mov reflow_temp_100, x
-	cjne a, reflow_temp_100, skipp2
-	mov STATE, #0x04
-	ret
+	cjne a, reflow_temp_100, nxt2
+nxt2:
+jc skipp2
+mov STATe, #0x04
+ret
 
 ; checks secs for state 4 -> 5
 check_secs_s4:
