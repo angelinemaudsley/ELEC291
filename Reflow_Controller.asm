@@ -655,15 +655,7 @@ safety_feature:
 safety_feature_loop:
 	ljmp safety_feature_loop
 
-<<<<<<< HEAD
 skipp2:
-=======
-; checks secs for state 2 -> 3
-check_sec_s2:
-	mov a, soak_time
-	cjne a, seconds, skipp
-	mov state, #3
->>>>>>> 369b868809f893e53a059f5c42ad6f7a756af95e
 	ret
 
 ; checks secs for state 2 -> 3
@@ -689,20 +681,12 @@ check_temps_s3:
 	ret
 
 ; checks secs for state 4 -> 5
-<<<<<<< HEAD
 check_secs_s4:
     mov a, reflow_time
     cjne a, seconds, skip_check_secs_s4
     mov state, #5
 skip_check_secs_s4:
     ret
-=======
-check_sec_s4:
-	mov a, reflow_time
-	cjne a, seconds, skipp
-	mov state, #5
-	ret
->>>>>>> 369b868809f893e53a059f5c42ad6f7a756af95e
 
 ; checks temp for state 5 -> 0
 check_temp_s5:
