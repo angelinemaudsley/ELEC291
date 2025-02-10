@@ -462,10 +462,10 @@ display_heating_s:
 	ret
 
 display_heating_r:
-	Set_Cursor(1,4)
-	Display_BCD(reflow_temp_100)
-	set_cursor(1,5)
-	display_bcd(reflow_temp)
+	;Set_Cursor(1,4)
+	;Display_BCD(reflow_temp_100)
+	;set_cursor(1,5)
+	;display_bcd(reflow_temp)
 	Set_Cursor(1,12)
 	Display_BCD(outside_temp)
 	Set_Cursor(2,7)
@@ -806,6 +806,18 @@ state_2:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
+
+	Set_Cursor(1,4)
+	Display_BCD(reflow_temp_100)
+	set_cursor(1,5)
+	display_bcd(reflow_temp)
+	
+	lcall clearx
+	mov x, reflow_temp_100
+	load_y(10)
+	lcall div32
+	mov reflow_temp_100, x
+
 
 state_2_loop: 
 	mov a, STATE
