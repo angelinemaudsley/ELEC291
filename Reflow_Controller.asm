@@ -669,9 +669,10 @@ skipp2:
 
 ; checks secs for state 2 -> 3
 check_secs_s2:
-    mov a, seconds
-	da a ; user specified soak_time is stored as bcd so we convert seconds to bcd for comparison
-    cjne a, soak_time, skip_check_secs_s2
+	mov bcd, soak_time ; soak_time stored as bcd
+	lcall bcd2hex
+    mov a, x
+    cjne a, seconds, skip_check_secs_s2
 	lcall debug_display
     mov state, #3
 skip_check_secs_s2:
@@ -697,7 +698,9 @@ ret
 
 ; checks secs for state 4 -> 5
 check_secs_s4:
-    mov a, reflow_time
+	mov bcd, reflow_time ; reflow_time stored as bcd
+	lcall bcd2hex
+    mov a, x
     cjne a, seconds, skip_check_secs_s4
     mov state, #5
 skip_check_secs_s4:
