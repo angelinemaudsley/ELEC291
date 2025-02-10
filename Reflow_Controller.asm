@@ -644,15 +644,17 @@ check_temps:
 next2:
 	ret
 
-check_currenttemp: ; TODO: apply >= comparison logic
+check_currenttemp:
 	mov a, current_temp
-	cjne a, #0x60, skipp1
-	setb temp_flag
+	subb a, #0x60
+	jc skipp1
+	setb temp_flag ; set safety flag if temp >=60
 	ret
 
 safety_feature:
 	mov a, seconds
-	cjne a, #0x3C, skipp1
+	subb a, #0x3C
+	jc skipp1
 	jb temp_flag, skipp2
 	lcall display_blank
 	mov pwm, #0
@@ -673,7 +675,7 @@ check_secs_s2:
 	lcall bcd2hex
     mov a, x
     cjne a, seconds, skip_check_secs_s2
-	lcall debug_display
+	;lcall debug_display
     mov state, #3
 skip_check_secs_s2:
     ret
@@ -681,18 +683,12 @@ skip_check_secs_s2:
 ; checks temp for state 3 -> 4
 check_temps_s3:
 	mov a, current_temp 
-	cjne a, Reflow_temp, nxt1
-nxt1:
-	jnc skipp2
+	subb a, Reflow_temp
+	jc skipp2
 	mov a, current_temp_hund
-	lcall clearx
-	mov x,reflow_temp_100
-	load_y(10)
-	lcall div32
-	mov reflow_temp_100, x
 	cjne a, reflow_temp_100, nxt2
-nxt2:
-jc skipp2
+	nxt2:
+	jc skipp2
 mov STATe, #0x04
 ret
 
