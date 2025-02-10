@@ -635,17 +635,16 @@ clearx:
 
 check_temps:
 	mov a, current_temp 
-	cjne a, Soak_temp, next1 ; want to use carry bit from cjne so arbitrary jump
-next1:
+	subb a, Soak_temp ; subb sets carry flag if a borrow is needed (current_temp < soaktemp)
 	;soak temp is 10 for 100, current temp is 1 for 100 
 	jc skipp1 ; skip if current_temp < soak_temp (carry bit set)
 	mov a, current_temp_hund
-	cjne a, soak_temp_hund, next2
+	cjne a, soak_temp_hund, next2 ; hundreds place moves relatively slowly so can we can just use cjne
 	mov STATE, #0x02
 next2:
 	ret
 
-check_currenttemp:
+check_currenttemp: ; TODO: apply >= comparison logic
 	mov a, current_temp
 	cjne a, #0x60, skipp1
 	setb temp_flag
@@ -670,9 +669,9 @@ skipp2:
 
 ; checks secs for state 2 -> 3
 check_secs_s2:
-    mov a, soak_time
-	da a
-    cjne a, seconds, skip_check_secs_s2
+    mov a, seconds
+	da a ; user specified soak_time is stored as bcd so we convert seconds to bcd for comparison
+    cjne a, soak_time, skip_check_secs_s2
 	lcall debug_display
     mov state, #3
 skip_check_secs_s2:
