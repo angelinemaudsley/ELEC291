@@ -604,7 +604,6 @@ oven_tmp:
 	;lcall div32
 	;mov current_temp_hund, x
 	
-
 ret
 
 display_oven_tmp:
@@ -653,9 +652,8 @@ check_currenttemp:
 
 safety_feature:
 	mov a, seconds
-	subb a, #0x3C
-	jc skipp1
-	jb temp_flag, skipp2
+	cjne a, #0x3C, skipp1 ; skip if current time is not 60
+	jb temp_flag, skipp2 ; skip if temperature checks passed
 	lcall display_blank
 	mov pwm, #0
 	Set_Cursor(1,1)
@@ -671,7 +669,7 @@ skipp2:
 
 ; checks secs for state 2 -> 3
 check_secs_s2:
-	mov bcd, soak_time ; soak_time stored as bcd
+	mov bcd, soak_time 			; soak_time stored as bcd
 	lcall bcd2hex
     mov a, x
     cjne a, seconds, skip_check_secs_s2
@@ -784,6 +782,7 @@ state_1:
 	load_y(10)
 	lcall div32
 	mov soak_temp_hund, x
+	
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
