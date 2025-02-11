@@ -51,6 +51,8 @@ reflow:db          'Reflow Time:',0
 time:db            'Time:xxs',0
 heating_to_r:db    'Tr:xxxC To:xxxC', 0
 cooling:db         'Cooling down...', 0
+done:db            'Done',0
+ready:db           'Ready to touch',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -891,7 +893,7 @@ state_5:
     
 state_5_loop:
 	mov a, STATE
-	cjne a, #5, state_0_jump
+	cjne a, #5, state_6
 	mov pwm, #100
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
@@ -902,8 +904,12 @@ state_5_loop:
 	lcall waitms
 	ljmp state_5_loop
 
-state_0_jump:
+state_6:
 	lcall display_blank
-	ljmp state_0
+	set_cursor(1,1)
+	send_constant_string(#done)
+	set_cursor(2,1)
+	send_constant_string(#ready)
+	ljmp state_6
 
 END
