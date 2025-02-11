@@ -59,7 +59,7 @@ def run(data):
         max_temp = max(ydata)
         avg_temp = sum(ydata) / len(ydata)
         
-        # Update the stats table
+        # Clear and update the stats table
         stats_table.clear()
         stats_table.axis('off')
         table_data = [["Mean", f"{mean_val:.2f}"],
@@ -67,7 +67,8 @@ def run(data):
                       ["Min", f"{min_temp:.2f}"],
                       ["Max", f"{max_temp:.2f}"],
                       ["Avg Temp", f"{avg_temp:.2f}"]]
-        stats_table.table(cellText=table_data, colLabels=["Statistic", "Value"], loc='center')
+        stats_table.table(cellText=table_data, colLabels=["Statistic", "Value"], loc='center', cellLoc='center', bbox=[0, 0, 1, 1])
+        fig.canvas.draw_idle()  # Redraw the figure
         
         # Logging the data to the CSV file with timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
