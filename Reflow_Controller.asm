@@ -41,8 +41,8 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to_s:  db   'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: ', 0;heating_temp:db    'Temp: xxxC', 0
+heating_to_s:  db  'Ts:xxxC To:xxxC', 0
+heating_temp:db    'Temp: xxxC', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
@@ -887,7 +887,7 @@ state_5:
 state_5_loop:
 	mov a, STATE
 	cjne a, #5, state_0_jump
-	mov pwm, #100
+	mov pwm, #0
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
 	lcall outside_tmp
