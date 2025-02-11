@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.widgets import button, radioButtons, checkButtons
+from matplotlib.widgets import button, RadioButtons, CheckButtons
 import sys, time, math
 import serial
 import csv
@@ -123,6 +123,17 @@ text_box = ax.text(
 
 # Create an animation function that continuously updates the graph
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
+
+# button that allows us to change the line colour
+axcolor = 'darkcyan'
+rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
+
+radio = RadioButtons(rax, ['red', 'blue', 'green'], activecolor='r')
+
+def color(labels):
+    line.set_color(labels)  # Change line color dynamically
+    fig.canvas.draw()
+radio.on_clicked(color)
 
 # Display the graph
 plt.show()
