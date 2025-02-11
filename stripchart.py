@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import sys, time, math, os
+import sys, os, time, math
 import serial
 import csv
 import pygame
@@ -9,8 +9,14 @@ from datetime import datetime
 from matplotlib.table import Table
 
 #for music
+
+music_file = "background.mp3"
+if not os.path.exists(music_file):
+    print(f" Error: {music_file} not found!")
+    sys.exit(1)  # Exit the program if music is missing
+
 pygame.mixer.init()
-pygame.mixer.music.load("background.mp3")  # Load music file, CHANGE IT
+pygame.mixer.music.load(music_file)  # Load music file, CHANGE IT
 pygame.mixer.music.play(-1)  # Loop music indefinitely
 
 # Configure the serial port for data input
@@ -28,7 +34,6 @@ def set_music_pitch(temperature):
     min_temp, max_temp = 20, 50  # Define reasonable temp range
     min_speed, max_speed = 0.8, 1.5  # Min and max pitch speed
 
-    # Normalize temperature to a range of 0-1
     norm_temp = (temperature - min_temp) / (max_temp - min_temp)
     norm_temp = max(0, min(norm_temp, 1))  # Keep in range 0-1
 
@@ -38,7 +43,6 @@ def set_music_pitch(temperature):
     # Apply pitch shift
     pygame.mixer.quit()  # Reset mixer (needed for pitch changes)
     pygame.mixer.init(frequency=int(44100 * pitch))  # Adjust pitch
-    #pygame.mixer.music.load("background.mp3")
     pygame.mixer.music.play(-1, fade_ms=500)
 
 
@@ -50,7 +54,7 @@ with open(csv_filename, mode='w', newline='') as file:
     writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"])
 
 #BONUS: pause flag
-paused = FALSE
+paused = False
 
 #data generator
 def data_gen():
@@ -132,28 +136,29 @@ def run(data):
         line.set_data(xdata, ydata)
         line.set_color(color)
 
-        mean_val = np.mean(ydata)
-        std_dev = np.std(ydata)
-        min_temp = min(ydata)
-        max_temp = max(ydata)
-        avg_temp = sum(ydata) / len(ydata)
-        
-        text_box.set_text(
-            f"Mean: {mean_val:.2f}\n"
-            f"Std Dev: {std_dev:.2f}\n"
-            f"Min: {min_temp:.2f}\n"
-            f"Max: {max_temp:.2f}\n"
-            f"Avg Temp: {avg_temp:.2f}"
-        )
-
-        # Update statistics table
-        update_table(mean_val, std_dev, min_temp, max_temp, avg_temp)
-
-        #log to csv
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(csv_filename, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
+        if len(ydata)>1:
+            mean_val = np.mean(ydata)
+            std_dev = np.std(ydata)
+            min_temp = min(ydata)
+            max_temp = max(ydata)
+            avg_temp = sum(ydata) / len(ydata)
+            
+            text_box.set_text(
+                f"Mean: {mean_val:.2f}\n"
+                f"Std Dev: {std_dev:.2f}\n"
+                f"Min: {min_temp:.2f}\n"
+                f"Max: {max_temp:.2f}\n"
+                f"Avg Temp: {avg_temp:.2f}"
+            )
+    
+            # Update statistics table
+            update_table(mean_val, std_dev, min_temp, max_temp, avg_temp)
+    
+            #log to csv
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(csv_filename, mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
     return line,
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
