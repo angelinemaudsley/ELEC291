@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import button, radioButtons, checkButtons
 import sys, time, math
 import serial
 import csv
