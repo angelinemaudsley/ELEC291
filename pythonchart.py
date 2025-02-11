@@ -59,14 +59,15 @@ def run(data):
         max_temp = max(ydata)
         avg_temp = sum(ydata) / len(ydata)
         
-        # Update the text box with computed statistics
-        text_box.set_text(
-            f"Mean: {mean_val:.2f}\n"
-            f"Std Dev: {std_dev:.2f}\n"
-            f"Min: {min_temp:.2f}\n"
-            f"Max: {max_temp:.2f}\n"
-            f"Avg Temp: {avg_temp:.2f}"
-        )
+        # Update the stats table
+        stats_table.clear()
+        stats_table.axis('off')
+        table_data = [["Mean", f"{mean_val:.2f}"],
+                      ["Std Dev", f"{std_dev:.2f}"],
+                      ["Min", f"{min_temp:.2f}"],
+                      ["Max", f"{max_temp:.2f}"],
+                      ["Avg Temp", f"{avg_temp:.2f}"]]
+        stats_table.table(cellText=table_data, colLabels=["Statistic", "Value"], loc='center')
         
         # Logging the data to the CSV file with timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -83,32 +84,32 @@ def on_close_figure(event):
 # Initialize time index for data generation
 data_gen.t = -1
 
-# Apply Seaborn style for better aesthetics
-plt.style.use('ggplot')
+# Apply dark mode style
+plt.style.use('dark_background')
 
 # Create the figure and subplot for graphing
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, (ax, stats_table) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [2, 1]})
 fig.canvas.mpl_connect('close_event', on_close_figure)  # Close event handler
 
 # Initialize an empty line with better aesthetics
-line, = ax.plot([], [], lw=2, color='royalblue', marker='o', markersize=5, linestyle='-')
+line, = ax.plot([], [], lw=2, color='deepskyblue', marker='o', markersize=5, linestyle='-')
 
 # Set initial graph axis limits
 ax.set_ylim(0, 100)  # Initial temperature range (adjust dynamically)
 ax.set_xlim(0, xsize)  # x-axis range for scrolling effect
-ax.grid(True, linestyle='--', alpha=0.6)  # Add a subtle grid
+ax.grid(True, linestyle='--', alpha=0.6, color='gray')  # Add a subtle grid
 
 # Labels and title
-ax.set_title("Real-Time Temperature Monitoring", fontsize=14, fontweight='bold')
-ax.set_xlabel("Time (s)", fontsize=12)
-ax.set_ylabel("Temperature (°C)", fontsize=12)
+ax.set_title("Real-Time Temperature Monitoring", fontsize=14, fontweight='bold', color='white')
+ax.set_xlabel("Time (s)", fontsize=12, color='white')
+ax.set_ylabel("Temperature (°C)", fontsize=12, color='white')
+ax.tick_params(axis='both', colors='white')
 
 # Lists to store real-time data
 xdata, ydata = [], []
 
-# Add a text box to display computed statistics in real-time
-text_box = ax.text(0.7, 0.9, "", transform=ax.transAxes, fontsize=12,
-                   bbox=dict(facecolor="white", edgecolor='black', alpha=0.8))
+# Create an empty table
+stats_table.axis('off')
 
 # Create an animation function that continuously updates the graph
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
