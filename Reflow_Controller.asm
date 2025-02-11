@@ -338,7 +338,7 @@ Soak_temp_decrement:
 
 decrement_s_hund:
     mov a, soak_temp_hund
-    cjne a , #0x00, cont_dec
+    cjne a , #0x00, cont_s_dec
     ljmp continue_dec_s
 
 check_rtime:
@@ -598,12 +598,6 @@ oven_tmp:
     lcall display_oven_tmp
     mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
-	;lcall clearx
-	;mov x, current_temp_hund
-	;load_y(10)
-	;lcall div32
-	;mov current_temp_hund, x
-	
 ret
 
 display_oven_tmp:
@@ -612,15 +606,6 @@ display_oven_tmp:
 	Display_BCD(bcd+2)
 	Display_char(#'.')
 	Display_BCD(bcd+1)
-	
-	;set_cursor(2,15)
-	;display_BCD(soak_temp_hund)
-	;set_cursor(2,13)
-	;display_BCD(current_temp_hund)
-	;display_bcd(bcd+3)
-	;Display_BCD(bcd+2)
-	;Display_char(#'.')
-	;Display_BCD(bcd+1)
 	ret
 
 skipp1:
@@ -685,10 +670,9 @@ check_temps_s3:
 	jc skipp2
 	mov a, current_temp_hund
 	cjne a, reflow_temp_100, nxt2
-	nxt2:
-	jc skipp2
-mov STATe, #0x04
-ret
+	mov STATe, #0x04
+nxt2:
+	ret
 
 ; checks secs for state 4 -> 5
 check_secs_s4:
@@ -721,6 +705,20 @@ debug_display:
 	display_bcd(seconds)
 	set_cursor(2,15)
 	display_BCD(STATE)
+ret
+
+reset_seconds:
+	mov a, seconds
+	mov a, #0x00
+	mov seconds, a
+	;lcall clearx
+	;mov x, soak_time
+	;lcall bcd2hex
+	;mov soak_time, x
+
+	;mov a, seconds
+	;SUBB a, soak_time
+	;mov seconds, a
 ret
 
 main:
@@ -799,24 +797,13 @@ state_1_loop:
 
 state_2:
 	lcall display_blank 
-	mov seconds, #0x00
+	mov seconds, #0
 	Set_Cursor(1,1)
 	Send_Constant_String(#soaking)
 	Set_Cursor(2,1)
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
-
-	Set_Cursor(1,4)
-	Display_BCD(reflow_temp_100)
-	set_cursor(1,5)
-	display_bcd(reflow_temp)
-	
-	lcall clearx
-	mov x, reflow_temp_100
-	load_y(10)
-	lcall div32
-	mov reflow_temp_100, x
 
 
 state_2_loop: 
@@ -827,16 +814,30 @@ state_2_loop:
 	mov x, seconds 
 	lcall hex2bcd 
 	display_BCD(bcd)
+	lcall clearx
 	mov pwm, #20
 	lcall check_secs_s2
 	ljmp state_2_loop
 
 state_3:
+	mov seconds, #0
+	lcall reset_seconds
 	lcall display_blank
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to_r)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+	
+	Set_Cursor(1,4)
+	Display_BCD(reflow_temp_100)
+	set_cursor(1,5)
+	display_bcd(reflow_temp)
+
+	lcall clearx
+	mov x, reflow_temp_100
+	load_y(10)
+	lcall div32
+	mov reflow_temp_100, x
 
 state_3_loop:
 	mov a, STATE
@@ -851,8 +852,8 @@ state_3_loop:
 	ljmp state_3_loop
 
 state_4:
-	lcall display_blank 
-	mov seconds, #0x00
+	lcall display_blank
+	mov seconds, #0
 	Set_Cursor(1,1)
 	Send_Constant_String(#reflow)
 	Set_Cursor(2,1)
@@ -864,9 +865,11 @@ state_4_loop:
     mov a, STATE
     cjne a, #4, state_5
     Set_Cursor(2,6)
+	lcall clearx
     mov x, seconds
     lcall hex2bcd
     display_BCD(bcd)
+	lcall clearx
     mov pwm, #20
     lcall check_secs_s4
     ljmp state_4_loop
@@ -892,6 +895,7 @@ state_5_loop:
 	ljmp state_5_loop
 
 state_0_jump:
+	lcall display_blank
 	ljmp state_0
 
 END
