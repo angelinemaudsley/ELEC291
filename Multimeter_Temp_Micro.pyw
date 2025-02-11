@@ -1,16 +1,25 @@
 #!/usr/bin/python
-from tkinter import *
+import sys
+if sys.version_info[0] < 3:
+    import Tkinter
+    from tkinter import *
+    import tkMessageBox
+else:
+    import tkinter as Tkinter
+    from tkinter import *
+    from tkinter import messagebox as tkMessageBox
 import time
+import csv
 import serial
 import serial.tools.list_ports
-import sys
 import kconvert
 
 top = Tk()
 top.resizable(0,0)
-top.title("Fluke_45/Tek_DMM4020 K-type Thermocouple")
+top.title("Fluke_45/Tek_DMM40xx K-type Thermocouple")
 
 #ATTENTION: Make sure the multimeter is configured at 9600 baud, 8-bits, parity none, 1 stop bit, echo Off
+LOG_FILE = "sample.csv"
 
 CJTemp = StringVar()
 Temp = StringVar()
@@ -20,6 +29,11 @@ DMM_Name = StringVar()
 connected=0
 global ser
    
+def log_data(timestamp, multimeter_temp):
+    with open(LOG_FILE, "a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([timestamp, multimeter_temp])
+
 def Just_Exit():
     top.destroy()
     try:
@@ -33,14 +47,13 @@ def update_temp():
         top.after(5000, FindPort) # Not connected, try to reconnect again in 5 seconds
         return
     try:
-        strin = ser.readline() # Read the requested value, for example "+0.234E-3 VDC"
-        strin = strin.rstrip()
-        strin = strin.decode()
-        print(strin)
+        strin_bytes = ser.readline() # Read the requested value, for example "+0.234E-3 VDC"
+        strin=strin_bytes.decode()
         ser.readline() # Read and discard the prompt "=>"
         if len(strin)>1:
             if strin[1]=='>': # Out of sync?
-                strin = ser.readline() # Read the value again
+                strin_bytes = ser.readline() # Read the value again
+                strin = strin_bytes.decode() 
         ser.write(b"MEAS1?\r\n") # Request next value from multimeter
     except:
         connected=0
@@ -65,6 +78,16 @@ def update_temp():
        except:
           cj=0.0 # If the input is blank, assume cold junction temperature is zero degrees centigrade
 
+       strin2 = ser2.readline()
+       strin2 = strin2.rstrip()
+       strin2 = strin2.decode()
+
+       if len(strin2) > 0:
+          try:
+             val2=float(strin2)
+          except:
+             val2=0
+
        if valid_val == 1 :
            ktemp=round(kconvert.mV_to_C(val, cj),1)
            if ktemp < -200:  
@@ -73,6 +96,10 @@ def update_temp():
                Temp.set("OVER")
            else:
                Temp.set(ktemp)
+               try:
+                  print(ktemp, val2, round(abs(ktemp-val2),2))
+               except:
+                  dummy=1
        else:
            Temp.set("----");
     else:
@@ -95,19 +122,17 @@ def FindPort():
       top.update()
       try:
          ser = serial.Serial(item[0], 9600, timeout=0.5)
-         ser.write(b"\x03") # Request prompt from possible multimeter
-         pstring = ser.readline() # Read the prompt "=>"
-         pstring=pstring.rstrip()
-         pstring=pstring.decode()
-         # print(pstring)
+         time.sleep(0.2) # for the simulator
+         ser.write(b'\x03') # Request prompt from possible multimeter
+         instr = ser.readline() # Read the prompt "=>"
+         pstring = instr.decode();
          if len(pstring) > 1:
             if pstring[1]=='>':
                ser.timeout=3  # Three seconds timeout to receive data should be enough
                portstatus.set("Connected to " + item[0])
                ser.write(b"VDC; RATE S; *IDN?\r\n") # Measure DC voltage, set scan rate to 'Slow' for max resolution, get multimeter ID
-               devicename=ser.readline()
-               devicename=devicename.rstrip()
-               devicename=devicename.decode()
+               instr=ser.readline()
+               devicename=instr.decode()
                DMM_Name.set(devicename.replace("\r", "").replace("\n", ""))
                ser.readline() # Read and discard the prompt "=>"
                ser.write(b"MEAS1?\r\n") # Request first value from multimeter
@@ -137,6 +162,17 @@ Button(top, width=11, text = "Exit", command = Just_Exit).grid(row=9, column=0)
 CJTemp.set ("22")
 DMMout.set ("NO DATA")
 DMM_Name.set ("--------")
+
+port = 'COM11' # Change to the serial port assigned to your board
+
+try:
+   ser2 = serial.Serial(port, 115200, timeout=0)
+except:
+   print('Serial port %s is not available' % (port))
+   portlist=list(serial.tools.list_ports.comports())
+   print('Available serial ports:')
+   for item in portlist:
+      print (item[0])
 
 top.after(500, FindPort)
 top.mainloop()
