@@ -542,9 +542,12 @@ Outside_tmp:
     mov z+2, x+2
     mov z+3, x+3 
     lcall hex2bcd
+    cjne STATE, #5, display
+    ret
+
+display:
     lcall Display_formated_BCD
-	
-	ret
+    ret
 
 oven_tmp:
     anl  ADCCON0, #0xF0  
