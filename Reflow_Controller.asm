@@ -41,8 +41,8 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to_s:  db  'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: xxxC', 0
+heating_to_s:  db   'Ts:xxxC To:xxxC', 0
+heating_temp:db    'Temp: xxx', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
@@ -542,12 +542,13 @@ Outside_tmp:
     mov z+2, x+2
     mov z+3, x+3 
     lcall hex2bcd
-    cjne STATE, #5, display
-    ret
+    mov a, STATE
+	cjne a, #5, display
+	ret
 
 display:
     lcall Display_formated_BCD
-    ret
+	ret
 
 oven_tmp:
     anl  ADCCON0, #0xF0  
@@ -633,7 +634,7 @@ next2:
 
 check_currenttemp:
 	mov a, current_temp
-	subb a, #0x60
+	subb a, #0x50
 	jc skipp1
 	setb temp_flag ; set safety flag if temp >=60
 	ret
@@ -689,25 +690,14 @@ skip_check_secs_s4:
 
 ; checks temp for state 5 -> 0
 check_temp_s5:
-    mov a, current_temp      
-    mov b, #60                 
-    cjne a, b, check_high       
-    ljmp skip_s5_to_s0         
-check_high:
-    anl a, #0x80               ; mask msb (bit 7)
-    jz skip_s5_to_s0           ; if msb = 0 skip to the end
-    mov STATE, #0x00           ; set state to 0 (finished)
-    ret                        ; return
-skip_s5_to_s0:
-    ret                        ; return without state change
-
-debug_display:
-	set_cursor(1,8)
-	display_BCD(soak_time)
-	set_cursor(2,8)
-	display_bcd(seconds)
-	set_cursor(2,15)
-	display_BCD(STATE)
+    mov a, #0x60
+	subb a, current_temp
+	jc skipp2
+	mov a, current_temp_hund
+	cjne a, #0, nx2
+	mov STATE, #0x00
+nx2:
+	ret
 ret
 
 reset_seconds:
@@ -779,10 +769,16 @@ state_1:
 	display_bcd(soak_temp)
 
 	lcall clearx
-	mov x, soak_temp_hund
+	mov bcd+0, #0x00
+	mov bcd+1, #0x00
+	mov bcd+2, #0x00
+	mov bcd+3, #0x00
+	mov bcd, soak_temp_hund
+	lcall bcd2hex
 	load_y(10)
 	lcall div32
-	mov soak_temp_hund, x
+	lcall hex2bcd
+	mov soak_temp_hund, bcd
 	
 state_1_loop:
 	mov a, STATE
@@ -818,7 +814,7 @@ state_2_loop:
 	lcall hex2bcd 
 	display_BCD(bcd)
 	lcall clearx
-	mov pwm, #20
+	mov pwm, #80
 	lcall check_secs_s2
 	ljmp state_2_loop
 
@@ -836,11 +832,19 @@ state_3:
 	set_cursor(1,5)
 	display_bcd(reflow_temp)
 
+
+
 	lcall clearx
-	mov x, reflow_temp_100
+	mov bcd+0, #0x00
+	mov bcd+1, #0x00
+	mov bcd+2, #0x00
+	mov bcd+3, #0x00
+	mov bcd, reflow_temp_100
+	lcall bcd2hex
 	load_y(10)
 	lcall div32
-	mov reflow_temp_100, x
+	lcall hex2bcd
+	mov reflow_temp_100, bcd
 
 state_3_loop:
 	mov a, STATE
@@ -850,6 +854,7 @@ state_3_loop:
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temps_s3
+	;lcall debug_display
 	mov R2, #250
 	lcall waitms
 	ljmp state_3_loop
@@ -887,7 +892,7 @@ state_5:
 state_5_loop:
 	mov a, STATE
 	cjne a, #5, state_0_jump
-	mov pwm, #0
+	mov pwm, #100
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
 	lcall outside_tmp
