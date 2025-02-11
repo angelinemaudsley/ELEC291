@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import sys, time, math
+import sys, time, math, os
 import serial
 import csv
 import pygame
@@ -10,7 +10,7 @@ from matplotlib.table import Table
 
 #for music
 pygame.mixer.init()
-pygame.mixer.music.load("background.mp3")  # Load music file
+pygame.mixer.music.load("background.mp3")  # Load music file, CHANGE IT
 pygame.mixer.music.play(-1)  # Loop music indefinitely
 
 # Configure the serial port for data input
@@ -25,7 +25,6 @@ xsize = 20  # Number of data points visible on the graph at a time
 
 #Bonus feature: music pitch adjustment with temperature
 def set_music_pitch(temperature):
-    """Change the music playback speed based on temperature."""
     min_temp, max_temp = 20, 50  # Define reasonable temp range
     min_speed, max_speed = 0.8, 1.5  # Min and max pitch speed
 
@@ -45,7 +44,6 @@ def set_music_pitch(temperature):
 
 # Bonus Feature: Data Logging
 csv_filename = "data_log.csv"
-#import os
 print(f"CSV is saved at: {os.path.abspath(csv_filename)}")
 with open(csv_filename, mode='w', newline='') as file:
     writer = csv.writer(file)
@@ -77,7 +75,7 @@ def on_key(event):
         paused = not paused
         print("Paused" if paused else "Resumed")
 
-#Bonus: contrast
+#Bonus: FANCY FIGURE
 plt.style.use('dark_background')  # Dark theme for better contrast
 fig, ax = plt.subplots()
 fig.canvas.mpl_connect('close_event', lambda event: (pygame.mixer.music.stop(), pygame.mixer.quit(), sys.exit(0)))
@@ -101,7 +99,7 @@ text_box = ax.text(0.7, 0.9, "", transform=ax.transAxes, fontsize=14,
 table = None
 
 # Add this inside the run() function, after calculating the statistics
-def update_table():
+def update_table(mean_val, std_dev, min_temp, max_temp, avg_temp):
     global table
     cell_text = [[f"{mean_val:.2f}", f"{std_dev:.2f}", f"{min_temp:.2f}", f"{max_temp:.2f}", f"{avg_temp:.2f}"]]
     
@@ -147,21 +145,16 @@ def run(data):
             f"Max: {max_temp:.2f}\n"
             f"Avg Temp: {avg_temp:.2f}"
         )
-        
+
+        # Update statistics table
+        update_table(mean_val, std_dev, min_temp, max_temp, avg_temp)
+
+        #log to csv
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
     return line,
-
-def on_close_figure(event):
-    pygame.mixer.music.stop()  # Stop music
-    pygame.mixer.quit()  # Quit pygame mixer 
-    sys.exit(0)
-
-
-
-
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
 plt.show()
