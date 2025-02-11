@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.widgets import button, RadioButtons, CheckButtons
+from matplotlib.widgets import Button, RadioButtons, CheckButtons
 import sys, time, math
 import serial
 import csv
@@ -115,7 +115,7 @@ fig.canvas.mpl_connect('close_event', on_close_figure)
 ax = fig.add_subplot(111)
 
 grid_color = '#444'
-line_color = '#00ffcc'
+line_color = 'cyan'
 text_color = '#ffffff'
 
 ax.set_facecolor("#121212")
@@ -146,7 +146,7 @@ ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repe
 axcolor = 'darkcyan'
 rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
 
-radio = RadioButtons(rax, ['red', 'blue', 'green'], activecolor='m')
+radio = RadioButtons(rax, ['cyan', 'red', 'lime'], activecolor='m')
 
 def color(labels):
     line.set_color(labels)  # Change line color dynamically
