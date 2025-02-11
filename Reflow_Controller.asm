@@ -270,7 +270,7 @@ check_decrement:
 	ljmp check_stime
 
 check_stime:
-	jb PB1, check_stemp
+	jb PB2, check_stemp
 	jb decrement1, Soak_time_decrement
 	mov a, Soak_time
 	add a, #0x01
@@ -286,7 +286,7 @@ Soak_time_decrement:
 	ljmp check_stemp
 
 check_stemp:
-	jb PB2, check_rtime
+	jb PB1, check_rtime
 	jb decrement1, Soak_temp_decrement
 	mov a, Soak_temp
 	add a, #0x01
@@ -342,7 +342,7 @@ decrement_s_hund:
     ljmp continue_dec_s
 
 check_rtime:
-	jb PB3, check_rtemp 
+	jb PB4, check_rtemp 
 	jb decrement1, Reflow_time_decrement
 	mov a, Reflow_time
 	add a, #0x01
@@ -358,7 +358,7 @@ Reflow_time_decrement:
 	ljmp check_rtemp
 
 check_rtemp:
-	jb PB4, skipp
+	jb PB3, skipp
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
