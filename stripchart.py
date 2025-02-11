@@ -6,6 +6,7 @@ import serial
 import csv
 import pygame
 from datetime import datetime
+from matplotlib.table import Table
 
 #for music
 pygame.mixer.init()
@@ -20,12 +21,9 @@ ser = serial.Serial(
     stopbits=serial.STOPBITS_TWO, 
     bytesize=serial.EIGHTBITS 
 )
-
-
-
 xsize = 20  # Number of data points visible on the graph at a time
 
-#Bonus feature: music played in background and pitch increases with temperature
+#Bonus feature: music pitch adjustment with temperature
 def set_music_pitch(temperature):
     """Change the music playback speed based on temperature."""
     min_temp, max_temp = 20, 50  # Define reasonable temp range
@@ -41,28 +39,87 @@ def set_music_pitch(temperature):
     # Apply pitch shift
     pygame.mixer.quit()  # Reset mixer (needed for pitch changes)
     pygame.mixer.init(frequency=int(44100 * pitch))  # Adjust pitch
-    pygame.mixer.music.load("background.mp3")
-    pygame.mixer.music.play(-1)
+    #pygame.mixer.music.load("background.mp3")
+    pygame.mixer.music.play(-1, fade_ms=500)
 
 
 # Bonus Feature: Data Logging
 csv_filename = "data_log.csv"
-import os
+#import os
 print(f"CSV is saved at: {os.path.abspath(csv_filename)}")
 with open(csv_filename, mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"])
 
+#BONUS: pause flag
+paused = FALSE
+
+#data generator
 def data_gen():
     t = data_gen.t  # Initialize time counter
     while True:
-        t += 1
-        strin = ser.readline().decode('utf-8').strip()
-        cool = float(strin)
-        set_music_pitch(cool)
-        yield t, cool
+        if not paused:
+            t += 1
+            strin = ser.readline().decode('utf-8').strip()
+            try:
+                cool = float(strin)
+                set_music_pitch(cool)
+                yield t, cool
+            except ValueError:
+                continue
 
+data_gen.t = -1
+
+# Bonus: Pause/Resume functionality
+def on_key(event):
+    global paused
+    if event.key == 'p':
+        paused = not paused
+        print("Paused" if paused else "Resumed")
+
+#Bonus: contrast
+plt.style.use('dark_background')  # Dark theme for better contrast
+fig, ax = plt.subplots()
+fig.canvas.mpl_connect('close_event', lambda event: (pygame.mixer.music.stop(), pygame.mixer.quit(), sys.exit(0)))
+fig.canvas.mpl_connect("key_press_event", on_key)
+
+ax.set_facecolor('#121212')  # Dark background for better contrast
+ax.grid(color='#555555')  # Subtle grid
+line, = ax.plot([], [], lw=3, alpha=0.8)
+
+ax.set_ylim(0, 100)
+ax.set_xlim(0, xsize)
+ax.set_xlabel("Time (s)", fontsize=12, color='white')
+ax.set_ylabel("Temperature (°C)", fontsize=12, color='white')
+ax.tick_params(axis='both', colors='white')
+
+xdata, ydata = [], []
+
+#text box for stats
+text_box = ax.text(0.7, 0.9, "", transform=ax.transAxes, fontsize=14,
+                   bbox=dict(facecolor="white", alpha=0.5, edgecolor='black', boxstyle='round,pad=0.5'))
+table = None
+
+# Add this inside the run() function, after calculating the statistics
+def update_table():
+    global table
+    cell_text = [[f"{mean_val:.2f}", f"{std_dev:.2f}", f"{min_temp:.2f}", f"{max_temp:.2f}", f"{avg_temp:.2f}"]]
+    
+    # Remove old table if it exists
+    for artist in ax.get_children():
+        if isinstance(artist, Table):
+            artist.remove()
+    
+    table = ax.table(cellText=cell_text, colLabels=["Mean", "Std Dev", "Min", "Max", "Avg Temp"],
+                     cellLoc='center', loc='bottom', bbox=[0, -0.3, 1, 0.2])
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+
+#to update graph
 def run(data):
+    if paused:
+        return line,
+        
     t, y = data
     if t > -1:
         xdata.append(t)
@@ -102,24 +159,60 @@ def on_close_figure(event):
     pygame.mixer.quit()  # Quit pygame mixer 
     sys.exit(0)
 
-data_gen.t = -1
 
-plt.style.use('dark_background')  # Dark theme for better contrast
-fig, ax = plt.subplots()
-fig.canvas.mpl_connect('close_event', on_close_figure)
 
-ax.set_facecolor('#121212')  # Dark background for better contrast
-ax.grid(color='#555555')  # Subtle grid
-line, = ax.plot([], [], lw=3, alpha=0.8)
-ax.set_ylim(0, 100)
-ax.set_xlim(0, xsize)
-ax.set_xlabel("Time (s)", fontsize=12, color='white')
-ax.set_ylabel("Temperature (°C)", fontsize=12, color='white')
-ax.tick_params(axis='both', colors='white')
 
-xdata, ydata = [], []
-text_box = ax.text(0.7, 0.9, "", transform=ax.transAxes, fontsize=14,
-                   bbox=dict(facecolor="white", alpha=0.5, edgecolor='black', boxstyle='round,pad=0.5'))
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
 plt.show()
+<<<<<<< HEAD
+=======
+
+
+
+
+from matplotlib.table import Table
+
+
+
+# Modify run() function to call update_table()
+def run(data):
+    global table
+    t, y = data
+    if t > -1:
+        xdata.append(t)
+        ydata.append(y)
+        
+        if t > xsize:
+            ax.set_xlim(t - xsize, t)
+        
+        ax.set_ylim(min(ydata) - 5, max(ydata) + 5)
+        line.set_data(xdata, ydata)
+        
+        # Compute statistics
+        mean_val = np.mean(ydata)
+        std_dev = np.std(ydata)
+        min_temp = min(ydata)
+        max_temp = max(ydata)
+        avg_temp = sum(ydata) / len(ydata)
+        
+        # Update table with new values
+        update_table()
+        
+        # Update text box
+        text_box.set_text(
+            f"Mean: {mean_val:.2f}\n"
+            f"Std Dev: {std_dev:.2f}\n"
+            f"Min: {min_temp:.2f}\n"
+            f"Max: {max_temp:.2f}\n"
+            f"Avg Temp: {avg_temp:.2f}"
+        )
+
+        # Log to CSV
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(csv_filename, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
+    
+    return line,
+>>>>>>> bda7e16eb82e8d3c7b05287e409f3c87f52cc812
