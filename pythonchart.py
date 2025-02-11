@@ -146,7 +146,7 @@ ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repe
 axcolor = 'darkcyan'
 rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
 
-radio = RadioButtons(rax, ['red', 'blue', 'green'], activecolor='r')
+radio = RadioButtons(rax, ['red', 'blue', 'green'], activecolor='m')
 
 def color(labels):
     line.set_color(labels)  # Change line color dynamically
