@@ -511,6 +511,8 @@ conv_to_bcd:
 	mov x+3, #0
     lcall hex2bcd
 	ret
+String: 
+	DB '\r', '\n', 0
 
 Outside_tmp:
     anl ADCCON0, #0xF0
@@ -617,6 +619,19 @@ oven_tmp:
     mov y+3, z+3
     lcall add32
     lcall hex2bcd
+
+	Send_BCD(bcd+4)
+	Send_BCD(bcd+3)
+	Send_BCD(bcd+2)
+	Send_BCD(bcd+1)
+	Send_BCD(bcd+0)
+
+	mov DPTR, #String
+	clr A
+	movc A, @A+DPTR
+	lcall putchar
+	inc DPTR
+
     mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
     jnb fahrenheit, display_oven_tmp
