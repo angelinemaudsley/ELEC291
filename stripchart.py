@@ -27,15 +27,15 @@ pygame.mixer.music.play(-1)  # Loop music indefinitely
 
 def set_music_pitch(temperature):
     min_temp, max_temp = 20, 240
-    min_speed, max_speed = 0.5, 3
+    min_vol, max_vol = 0.2, 1
 
     norm_temp = (temperature - min_temp) / (max_temp - min_temp)
     norm_temp = max(0, min(norm_temp, 1))  # Keep in range 0-1
 
-    pitch = min_speed + (max_speed - min_speed) * norm_temp
+    volume = min_vol + (max_vol - min_vol) * norm_temp
 
-    #pygame.mixer.music.set_volume(pitch)
-    pygame.mixer.music.set_volume(min(1.0, max(0.0, pitch)))  # Ensure it stays between 0-1
+    pygame.mixer.music.set_volume(volume)
+    #pygame.mixer.music.set_volume(min(1.0, max(0.0, pitch)))  # Ensure it stays between 0-1
     #pygame.mixer.quit()
     #pygame.mixer.init(frequency=int(44100 * pitch))
     #pygame.mixer.music.play(-1, fade_ms=500)
@@ -80,7 +80,7 @@ def data_gen():
 # Voice Command Handling
 def listen_for_command():
     with sr.Microphone() as source:
-        print("🎙️ Listening for command...")
+        print("Listening for command...")
         recognizer.adjust_for_ambient_noise(source)
         try:
             audio = recognizer.listen(source, timeout=5)
