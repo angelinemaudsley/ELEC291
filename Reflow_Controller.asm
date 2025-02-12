@@ -709,12 +709,14 @@ oven_tmp:
 
     jnb fahrenheit_flag, display_oven_tmp
 	lcall bcd2hex
-	load_y(9)
+	load_y(90000)		; try using larger numbers
 	lcall mul32
-	load_y(5)
+	load_y(500)
 	lcall div32 
-	load_y(32)
-	lcall add32 
+	load_y(3200)
+	lcall add32
+	load_y(100)
+	lcall div32
 	lcall hex2bcd 
 	ljmp display_oven_tmp
 
