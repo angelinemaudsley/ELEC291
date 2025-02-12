@@ -20,7 +20,6 @@ top = Tk()
 top.resizable(0, 0)
 top.title("Fluke_45/Tek_DMM40xx K-type Thermocouple")
 
-# ATTENTION: Make sure the multimeter is configured at 9600 baud, 8-bits, parity none, 1 stop bit, echo Off
 LOG_FILE = "sample.csv"
 
 CJTemp = StringVar()
@@ -31,10 +30,10 @@ DMM_Name = StringVar()
 connected = 0
 global ser
 
-def log_data(timestamp, multimeter_temp):
+def log_data(timestamp, multimeter_temp, val2, diff):
     with open(LOG_FILE, "a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([timestamp, multimeter_temp])
+        writer.writerow([timestamp, multimeter_temp, val2, diff])
 
 def Just_Exit():
     top.destroy()
@@ -46,7 +45,7 @@ def Just_Exit():
 def update_temp():
     global ser, connected
     if connected == 0:
-        top.after(5000, FindPort)  # Not connected, try to reconnect again in 5 seconds
+        top.after(5000, FindPort)
         return
     try:
         strin_bytes = ser.readline()
@@ -69,7 +68,7 @@ def update_temp():
     if len(strin_clean) > 0:
         DMMout.set(strin.replace("\r", "").replace("\n", ""))
         try:
-            val = float(strin_clean) * 1000.0  # Convert from volts to millivolts
+            val = float(strin_clean) * 1000.0  
             valid_val = 1
         except:
             valid_val = 0
@@ -92,8 +91,9 @@ def update_temp():
                 Temp.set(ktemp)
                 try:
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-                    log_data(timestamp, ktemp)  # Log the data
-                    print(ktemp, val2, round(abs(ktemp - val2), 2))
+                    diff = round(abs(ktemp - val2), 2)
+                    log_data(timestamp, ktemp, val2, diff)
+                    print(ktemp, val2, diff)
                 except:
                     pass
         else:
@@ -166,4 +166,5 @@ except:
 
 top.after(500, FindPort)
 top.mainloop()
+
 
