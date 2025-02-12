@@ -26,8 +26,8 @@ pygame.mixer.music.load(music_file)  # Load background music
 pygame.mixer.music.play(-1)  # Loop music indefinitely
 
 def set_music_pitch(temperature):
-    min_temp, max_temp = 20, 50
-    min_speed, max_speed = 0.8, 1.5
+    min_temp, max_temp = 20, 240
+    min_speed, max_speed = 0.5, 3
 
     norm_temp = (temperature - min_temp) / (max_temp - min_temp)
     norm_temp = max(0, min(norm_temp, 1))  # Keep in range 0-1
