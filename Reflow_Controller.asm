@@ -1043,7 +1043,7 @@ state_4_loop:
     lcall hex2bcd
     display_BCD(bcd)
     lcall clearx
-    mov pwm, #20
+    mov pwm, #80
     lcall check_secs_s4
 	lcall stage_temp
 	mov R2, #250
