@@ -965,38 +965,6 @@ main:
     lcall LCD_4BIT
 	lcall Timer2_ISR
 	lcall Timer0_Init
-
-	mov A, #0x18
-
-	writecommand(#0x00)
-
-	WriteData(#00000B)
-	WriteData(#00100B)
-	WriteData(#01110B)
-	WriteData(#11111B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-
-	WriteData(#00000B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#11111B)
-	WriteData(#01110B)
-	WriteData(#00100B)
-
-	WriteData(#00000B)
-	WriteData(#00000B)
-	WriteData(#00001B)
-	WriteData(#00001B)
-	WriteData(#10010B)
-	WriteData(#01010B)
-	WriteData(#00100B)
-	WriteData(#00000B)
-
     
      ; initial messages in LCD
     mov STATE, #0x00
