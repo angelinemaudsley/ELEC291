@@ -29,7 +29,8 @@ ser = serial.Serial(
     stopbits=serial.STOPBITS_ONE, 
     bytesize=serial.EIGHTBITS
 )
-
+if not ser.is_open:
+    ser.open()
 xsize = 20  # Number of data points visible on the graph at a time
 
 # Music Pitch Adjusts with Temperature
@@ -145,9 +146,11 @@ text_box = ax.text(
 def run(data):
     global latest_temp
     if paused:
+        print("Paused, skipping update")  # Debug print
         return line,  # Prevent updates if paused
     
     t, y = data
+    print(f"Updating graph with data: t={t}, y={y}")  # Debug print
     if t > -1:
         xdata.append(t)
         ydata.append(y)
@@ -190,5 +193,6 @@ def run(data):
 
 # Start Animation
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=1000, repeat=False)
+print("Animation started")  # Debug print
 plt.show()
 
