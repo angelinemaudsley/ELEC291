@@ -34,9 +34,10 @@ def set_music_pitch(temperature):
 
     pitch = min_speed + (max_speed - min_speed) * norm_temp
 
-    pygame.mixer.quit()
-    pygame.mixer.init(frequency=int(44100 * pitch))
-    pygame.mixer.music.play(-1, fade_ms=500)
+    pygame.mixer.music.set_volume(pitch)
+    #pygame.mixer.quit()
+    #pygame.mixer.init(frequency=int(44100 * pitch))
+    #pygame.mixer.music.play(-1, fade_ms=500)
 
 # Initialize Speech Engine
 engine = pyttsx3.init()
@@ -100,7 +101,13 @@ def on_key(event):
     global paused
     if event.key == 'p':
         paused = not paused
-        print(" Paused" if paused else " Resumed")
+        if paused:
+            pygame.mixer.music.pause()
+            print("Paused")
+        else:
+            pygame.mixer.music.unpause()
+            print("Resumed")
+       
 
 # Graph Update Function
 def run(data):
@@ -149,6 +156,7 @@ data_gen.t = -1
 plt.style.use('dark_background')
 fig = plt.figure(figsize=(10, 6))
 fig.canvas.mpl_connect('close_event', on_close_figure)
+fig.canvas.mpl_connect('key_press_event', on_key)
 ax = fig.add_subplot(111)
 
 grid_color = '#444'
