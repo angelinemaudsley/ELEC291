@@ -34,7 +34,8 @@ def set_music_pitch(temperature):
 
     pitch = min_speed + (max_speed - min_speed) * norm_temp
 
-    pygame.mixer.music.set_volume(pitch)
+    #pygame.mixer.music.set_volume(pitch)
+    pygame.mixer.music.set_volume(min(1.0, max(0.0, pitch)))  # Ensure it stays between 0-1
     #pygame.mixer.quit()
     #pygame.mixer.init(frequency=int(44100 * pitch))
     #pygame.mixer.music.play(-1, fade_ms=500)
@@ -61,6 +62,7 @@ latest_temp = None  # Store the latest temperature
 
 #  Data Generator
 def data_gen():
+    global paused
     global latest_temp
     t = data_gen.t
     while True:
@@ -143,8 +145,7 @@ def run(data):
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
-
-         listen_for_command()
+        listen_for_command()
     
     return line,
 
