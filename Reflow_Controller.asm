@@ -36,13 +36,14 @@ org 0x002B
 
 START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
+CONVERT equ P1.6
 
 
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
 heating_to_s:  db   'Ts:xxxC To:xxxC', 0
-heating_temp:db    'Temp: xxx', 0
+heating_temp:db    'Temp:', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp'
@@ -53,6 +54,9 @@ heating_to_r:db    'Tr:xxxC To:xxxC', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
 ready:db           'Ready to touch',0
+celsius:           'C',0
+fahrenheit:        'F',0
+blank_unit:        ' ',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -100,6 +104,7 @@ decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
 temp_flag: dbit 1
+fahrenheit: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -509,7 +514,7 @@ conv_to_bcd:
 
 Outside_tmp:
     anl ADCCON0, #0xF0
-	orl ADCCON0, #0x07 ; Select channel 7 
+    orl ADCCON0, #0x07 ; Select channel 7 
 
     clr ADCF
     setb ADCS
@@ -543,14 +548,25 @@ Outside_tmp:
     mov z+1, x+1
     mov z+2, x+2
     mov z+3, x+3 
+	jnb fahrenheit, outside_temp_continue
+
+fahrenheit_conversion:
+	load_y(9)
+	lcall mul32
+	load_y(5)
+	lcall div32 
+	load_y(32)
+	lcall add32
+
+outside_temp_continue:
     lcall hex2bcd
     mov a, STATE
-	cjne a, #5, display
-	ret
+    cjne a, #5, display
+    ret
 
 display:
     lcall Display_formated_BCD
-	ret
+    ret
 
 oven_tmp:
     anl  ADCCON0, #0xF0  
@@ -601,10 +617,17 @@ oven_tmp:
     mov y+3, z+3
     lcall add32
     lcall hex2bcd
-    lcall display_oven_tmp
     mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
-ret
+    jnb fahrenheit, display_oven_tmp
+	lcall bcd2hex
+	load_y(9)
+	lcall mul32
+	load_y(5)
+	lcall div32 
+	load_y(32)
+	lcall add32   
+	lcall hex2bcd 
 
 display_oven_tmp:
 	Set_Cursor(2,6)
@@ -716,6 +739,26 @@ reset_seconds:
 	;mov seconds, a
 ret
 
+check_convert: 
+	jb CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
+	jb  CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+	jnb CONVERT, $		; Wait for button release.  The '$' means: jump to same instruction.
+	cpl fahrenheit 
+	ret 
+
+fahrenheit_display:
+	set_cursor(2,13)
+	send_constant_string(#blank_unit)
+	send_constant_string(#fahrenheit)
+	ret 
+
+celsius_display:
+	set_cursor(2,13)
+	send_constant_string(#blank_unit)
+	send_constant_string(#celsius)
+	ret 
+
 main:
 	mov sp, #0x7f
 	lcall Init_All
@@ -737,6 +780,7 @@ main:
     mov reflow_temp_100, #0x00
     clr decrement1
     clr s_flag 
+    clr fahrenheit
 	
 Forever:
 	lcall display_blank
@@ -787,11 +831,14 @@ state_1_loop:
 	cjne a, #1, state_2
 	lcall display_heating_s
 	mov pwm, #0
+	lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_currenttemp
 	lcall safety_feature
 	lcall check_temps
+	jb fahrenheit, fahrenheit_display
+	jnb fahrenheit, celsius_display
 	mov R2, #250
 	lcall waitms
 	ljmp state_1_loop
@@ -834,8 +881,6 @@ state_3:
 	set_cursor(1,5)
 	display_bcd(reflow_temp)
 
-
-
 	lcall clearx
 	mov bcd+0, #0x00
 	mov bcd+1, #0x00
@@ -853,10 +898,12 @@ state_3_loop:
 	cjne a, #3, state_4
 	lcall display_heating_r
 	mov pwm, #0
+	lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temps_s3
-	;lcall debug_display
+	jb fahrenheit, fahrenheit_display
+	jnb fahrenheit, celsius_display
 	mov R2, #250
 	lcall waitms
 	ljmp state_3_loop
@@ -875,11 +922,11 @@ state_4_loop:
     mov a, STATE
     cjne a, #4, state_5
     Set_Cursor(2,6)
-	lcall clearx
+    lcall clearx
     mov x, seconds
     lcall hex2bcd
     display_BCD(bcd)
-	lcall clearx
+    lcall clearx
     mov pwm, #20
     lcall check_secs_s4
     ljmp state_4_loop
@@ -900,6 +947,7 @@ state_5_loop:
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temp_s5
+	lcall check_convert
 	mov R2, #250
 	lcall waitms
 	ljmp state_5_loop
