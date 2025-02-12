@@ -816,6 +816,7 @@ stage_temp:
     lcall add32
     lcall hex2bcd
 
+	send_bcd(bcd+3)
 	Send_BCD(bcd+2)
     put_decimal_1:
     jnb TI, put_decimal_1 ; Wait for transmission to complete
