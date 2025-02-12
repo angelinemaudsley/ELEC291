@@ -19,15 +19,19 @@ $LIST
 ;                               -------
 ;
 
+TIMER0_RATE   EQU 4096     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
 CLK               EQU 16600000 ; Microcontroller system frequency in Hz
 BAUD              EQU 115200 ; Baud rate of UART in bps
 TIMER1_RELOAD     EQU (0x100-(CLK/(16*BAUD)))
-TIMER0_RELOAD_1MS EQU (0x10000-(CLK/1000))
 TIMER2_RATE EQU 100 ; 100Hz or 10ms
 TIMER2_RELOAD EQU (65536-(CLK/(16*TIMER2_RATE))) ; Need to change timer 2 input divide to 16 in T2MOD
 
 ORG 0x0000
 	ljmp main
+; Timer/Counter 0 overflow interrupt vector
+org 0x000B
+	ljmp Timer0_ISR
 org 0x0023
 	reti
 	; Timer/Counter 2 overflow interrupt vector
@@ -37,26 +41,31 @@ org 0x002B
 START_BUTTON  equ P1.7
 PWM_OUT equ P1.0 ;logic 1 = oven on
 CONVERT equ P1.6
+SOUND_OUT equ P1.2
+MUTE_BUTTON equ P3.0
 
 
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
 reflow_param:db    'Reflow: xxs xxxC', 0
-heating_to_s:  db   'Ts:xxxC To:xxxC', 0
+heating_to_s:  db   'Ts:   C To:   C', 0
 heating_temp:db    'Temp:', 0
 blank: db          '                ', 0 
 safety_message:db  'ERROR: ', 0
-safety_message1:db  'Cant Read Temp'
+safety_message1:db  'Cant Read Temp',0
 soaking:db         'Soaking time:', 0
 reflow:db          'Reflow Time:',0
 time:db            'Time:xxs',0
-heating_to_r:db    'Tr:xxxC To:xxxC', 0
+heating_to_r:db    'Tr:   C To:   C', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
 ready:db           'Ready to touch',0
-celsius:db           'C',0
-fahrenheit:db        'F',0
-blank_unit:db        ' ',0
+celsius:db         'C',0
+fahrenheit:db      'F',0
+low_1:db             'L',0
+high_1:db            'H',0
+good:db            'G',0
+blank_unit:db      ' ',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -105,6 +114,7 @@ s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
 temp_flag: dbit 1
 fahrenheit_flag: dbit 1
+mute_flag: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -173,20 +183,33 @@ Init_All:
 
 ret
 	
-wait_1ms:
-	clr	TR0 ; Stop timer 0
-	clr	TF0 ; Clear overflow flag
-	mov	TH0, #high(TIMER0_RELOAD_1MS)
-	mov	TL0,#low(TIMER0_RELOAD_1MS)
-	setb TR0
-	jnb	TF0, $ ; Wait for overflow
+Timer0_Init:
+	orl CKCON, #0b00001000 ; Input for timer 0 is sysclk/1
+	mov a, TMOD
+	anl a, #0xf0 ; 11110000 Clear the bits for timer 0
+	orl a, #0x01 ; 00000001 Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD)
+	mov TL0, #low(TIMER0_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
 	ret
 
-; Wait the number of miliseconds in R2
-waitms:
-	lcall wait_1ms
-	djnz R2, waitms
-	ret
+;---------------------------------;
+; ISR for timer 0.  Set to execute;
+; every 1/4096Hz to generate a    ;
+; 2048 Hz wave at pin SOUND_OUT   ;
+;---------------------------------;
+Timer0_ISR:
+	;clr TF0  ; According to the data sheet this is done for us already.
+	; Timer 0 doesn't have 16-bit auto-reload, so
+	clr TR0
+	mov TH0, #high(TIMER0_RELOAD)
+	mov TL0, #low(TIMER0_RELOAD)
+	setb TR0
+	cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+	reti
 
 Timer2_ISR:
 	clr TF2 ; Timer 2 doesn't clear TF2 automatically. Do it in the ISR. It is bit addressable.
@@ -277,20 +300,60 @@ check_decrement:
 	ljmp check_stime
 
 check_stime:
-	jb PB4, check_stemp
+	jb PB4, check_stemp_intr
 	jb decrement1, Soak_time_decrement
 	mov a, Soak_time
 	add a, #0x01
 	da a
 	mov Soak_time, a
-	ljmp check_stemp
+	subb a, #0x60
+	jc display_up_stime ; skip if soak_time < 60
+	mov a, Soak_time
+	subb a, #0x90
+	jc display_check_stime
+	ljmp display_down_stime 
 
 Soak_time_decrement: 
 	mov a, Soak_time
 	add a, #0x99
 	da a
 	mov Soak_time, a
+	subb a, #0x60
+	jc display_up_stime ; skip if soak_time < 60
+	mov a, Soak_time
+	subb a, #0x90
+	jc display_check_stime
+	ljmp display_down_stime
+
+display_up_stime:
+	writecommand(#0x40)
+
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#01110B)
+	WriteData(#11111B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteCommand(#0x8A)
+	WriteData(#0)
 	ljmp check_stemp
+
+
+display_down_stime:
+	WriteCommand(#0x8A)
+	WriteData(#1)
+	ljmp check_stemp
+
+check_stemp_intr:
+	ljmp check_stemp
+
+display_check_stime:
+	WriteCommand(#0x8A)
+	WriteData(#2)
+	ljmp check_stemp
+	
 
 check_stemp:
 	jb PB3, check_rtime
@@ -434,6 +497,20 @@ Check_start:
 	mov STATE, #0x01
 	ret
 
+check_convert: 
+	jb CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
+	jb  CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+	cpl fahrenheit_flag 
+	ret 
+
+Check_mute:
+	jb MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
+	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
+	jb  MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
+	cpl mute_flag
+	ret
+
 smjmp:
 ljmp skipp
 
@@ -550,17 +627,7 @@ Outside_tmp:
     mov z+1, x+1
     mov z+2, x+2
     mov z+3, x+3 
-	;jnb fahrenheit_flag, outside_temp_continue
 
-;fahrenheit_conversion:
-;	load_y(9)
-;	lcall mul32
-;	load_y(5)
-;	lcall div32 
-;	load_y(32)
-;	lcall add32
-
-outside_temp_continue:
     lcall hex2bcd
     mov a, STATE
     cjne a, #5, display
@@ -620,32 +687,10 @@ oven_tmp:
     lcall add32
     lcall hex2bcd
 
-	lcall output_temp
-
-    mov current_temp, bcd+2
+	mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
-    ;jnb fahrenheit_flag, display_oven_tmp
-	;lcall bcd2hex
-	;load_y(9)
-	;lcall mul32
-	;load_y(5)
-	;lcall div32 
-	;load_y(32)
-	;lcall add32   
-	;lcall hex2bcd 
 
-display_oven_tmp:
-	Set_Cursor(2,6)
-    display_bcd(bcd+3)
-	Display_BCD(bcd+2)
-	Display_char(#'.')
-	Display_BCD(bcd+1)
-	ret
-
-skipp1:
-	ret
-
-output_temp:
+	send_BCD(bcd+3)
 	Send_BCD(bcd+2)
     put_decimal:
     jnb TI, put_decimal ; Wait for transmission to complete
@@ -661,7 +706,29 @@ output_temp:
     jnb TI, put_n ; Wait for transmission to complete
     clr TI
     mov SBUF, #'\n'
+
+    jnb fahrenheit_flag, display_oven_tmp
+	lcall bcd2hex
+	load_y(9)
+	lcall mul32
+	load_y(5)
+	lcall div32 
+	load_y(32)
+	lcall add32 
+	lcall hex2bcd 
+	ljmp display_oven_tmp
+
+display_oven_tmp:
+	Set_Cursor(2,6)
+    display_bcd(bcd+3)
+	Display_BCD(bcd+2)
+	Display_char(#'.')
+	Display_BCD(bcd+1)
 	ret
+
+skipp1:
+	ret
+
 
 stage_temp:
     anl ADCCON0, #0xF0
@@ -749,7 +816,22 @@ stage_temp:
     lcall add32
     lcall hex2bcd
 
-	lcall output_temp
+	Send_BCD(bcd+2)
+    put_decimal_1:
+    jnb TI, put_decimal_1 ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'.'
+	Send_BCD(bcd+1)
+	Send_BCD(bcd+0)
+    put_r_1:
+    jnb TI, put_r_1 ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'\r'
+    put_n_1:
+    jnb TI, put_n_1 ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'\n'
+
 	ret
 
 clearx:
@@ -852,13 +934,9 @@ reset_seconds:
 	;mov seconds, a
 ret
 
-;check_convert: 
-;	jb CONVERT, smjmp  ; if the 'Start' button is not pressed skip
-;	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-;	jb  CONVERT, smjmp  ; if the 'Start' button is not pressed skip
-;	jnb CONVERT, $		; Wait for button release.  The '$' means: jump to same instruction.
-;	cpl fahrenheit_flag 
-;	ret 
+check_fahrenheit:
+	jb fahrenheit_flag, fahrenheit_display
+	ljmp celsius_display
 
 fahrenheit_display:
 	set_cursor(2,13)
@@ -874,9 +952,50 @@ celsius_display:
 
 main:
 	mov sp, #0x7f
+
+	mov P0M1, #0x00
+    mov P0M2, #0x00
+    mov P1M1, #0x00
+    mov P1M2, #0x00
+    mov P3M2, #0x00
+    mov P3M2, #0x00
+
 	lcall Init_All
     lcall LCD_4BIT
 	lcall Timer2_ISR
+	lcall Timer0_Init
+
+	mov A, #0x18
+
+	writecommand(#0x00)
+
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#01110B)
+	WriteData(#11111B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#11111B)
+	WriteData(#01110B)
+	WriteData(#00100B)
+
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00001B)
+	WriteData(#00001B)
+	WriteData(#10010B)
+	WriteData(#01010B)
+	WriteData(#00100B)
+	WriteData(#00000B)
+
     
      ; initial messages in LCD
     mov STATE, #0x00
@@ -894,6 +1013,8 @@ main:
     clr decrement1
     clr s_flag 
     clr fahrenheit_flag
+	clr TR0
+	clr mute_flag
 	
 Forever:
 	lcall display_blank
@@ -906,16 +1027,18 @@ state_0:
 
 state_0_loop:
 	mov a, STATE
-        mov pwm, #100
+    mov pwm, #100
 	cjne a, #0, state_1
 	lcall LCD_PB
 	lcall check_decrement
 	lcall display_menu
 	lcall Check_start
+	lcall check_mute
 	ljmp state_0_loop
 
 state_1: 
 	lcall display_blank
+	lcall check_mute
 	mov seconds, #0x00
 	Set_Cursor(1, 1)
 	Send_Constant_String(#heating_to_s)
@@ -938,26 +1061,31 @@ state_1:
 	lcall div32
 	lcall hex2bcd
 	mov soak_temp_hund, bcd
+	jnb mute_flag, state_1_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
 	
 state_1_loop:
 	mov a, STATE
 	cjne a, #1, state_2
 	lcall display_heating_s
 	mov pwm, #0
-	;lcall check_convert
+	lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_currenttemp
 	lcall safety_feature
 	lcall check_temps
-	;jb fahrenheit_flag, fahrenheit_display
-	;jnb fahrenheit_flag, celsius_display
-	mov R2, #250
-	lcall waitms
+	lcall check_fahrenheit
+	lcall check_mute
+	wait_milli_seconds(#250)
 	ljmp state_1_loop
 
 state_2:
 	lcall display_blank 
+	lcall check_mute
 	mov seconds, #0
 	Set_Cursor(1,1)
 	Send_Constant_String(#soaking)
@@ -965,6 +1093,11 @@ state_2:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
+	jnb mute_flag, state_2_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
 
 
 state_2_loop: 
@@ -979,8 +1112,8 @@ state_2_loop:
 	mov pwm, #80
 	lcall check_secs_s2
 	lcall stage_temp
-	mov R2, #250
-	lcall waitms
+	lcall check_mute
+	wait_milli_seconds(#250)
 	ljmp state_2_loop
 
 state_3:
@@ -991,6 +1124,7 @@ state_3:
 	Send_Constant_String(#heating_to_r)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+	lcall check_mute
 	
 	Set_Cursor(1,4)
 	Display_BCD(reflow_temp_100)
@@ -1008,20 +1142,24 @@ state_3:
 	lcall div32
 	lcall hex2bcd
 	mov reflow_temp_100, bcd
+	jnb mute_flag, state_3_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
 
 state_3_loop:
 	mov a, STATE
 	cjne a, #3, state_4
 	lcall display_heating_r
 	mov pwm, #0
-	;lcall check_convert
+	lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temps_s3
-	;jb fahrenheit_flag, fahrenheit_display
-	;jnb fahrenheit_flag, celsius_display
-	mov R2, #250
-	lcall waitms
+	lcall check_fahrenheit
+	lcall check_mute
+	wait_milli_seconds(#250)
 	ljmp state_3_loop
 
 state_4:
@@ -1033,6 +1171,12 @@ state_4:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(reflow_time)
+	lcall check_mute
+	jnb mute_flag, state_4_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
 
 state_4_loop:
     mov a, STATE
@@ -1046,8 +1190,8 @@ state_4_loop:
     mov pwm, #80
     lcall check_secs_s4
 	lcall stage_temp
-	mov R2, #250
-	lcall waitms
+	lcall check_mute
+	wait_milli_seconds(#250)
     ljmp state_4_loop
 
 state_5:
@@ -1056,6 +1200,12 @@ state_5:
     Send_Constant_String(#cooling)
     Set_Cursor(2,1)
     Send_Constant_String(#heating_temp)
+	lcall check_mute
+	jnb mute_flag, state_5_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
     
 state_5_loop:
 	mov a, STATE
@@ -1063,22 +1213,43 @@ state_5_loop:
 	mov pwm, #100
 	Set_Cursor(2,7)
 	Display_BCD(current_temp)
+	lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temp_s5
-	;lcall check_convert
-	mov R2, #250
-	lcall waitms
+	lcall check_fahrenheit
+	lcall check_mute
+	wait_milli_seconds(#250)
 	ljmp state_5_loop
 
 state_6:
 	lcall display_blank
-
-state_6_loop:
 	set_cursor(1,1)
 	send_constant_string(#done)
 	set_cursor(2,1)
 	send_constant_string(#ready)
+	lcall check_mute
+	jnb mute_flag, state_6_loop
+	cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
+	Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
+    Wait_Milli_Seconds(#250)
+    wait_milli_seconds(#250)
+    cpl TR0
+state_6_loop:
 	ljmp state_6_loop
 
+
 END
+	
+	
