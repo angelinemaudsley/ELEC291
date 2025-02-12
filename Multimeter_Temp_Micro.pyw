@@ -158,7 +158,7 @@ DMM_Name.set("--------")
 
 port = 'COM11'
 try:
-    ser2 = serial.Serial(port, 115200, timeout=0)
+    ser2 = serial.Serial(port, 115200, timeout=0.1)
 except:
     print(f'Serial port {port} is not available')
     for item in list(serial.tools.list_ports.comports()):
