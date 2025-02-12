@@ -54,9 +54,9 @@ heating_to_r:db    'Tr:xxxC To:xxxC', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
 ready:db           'Ready to touch',0
-celsius:           'C',0
-fahrenheit:        'F',0
-blank_unit:        ' ',0
+celsius:db           'C',0
+fahrenheit:db        'F',0
+blank_unit:db        ' ',0
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -104,7 +104,7 @@ decrement1: dbit 1
 s_flag: dbit 1 ; set to 1 every time a second has passed
 mf: dbit 1
 temp_flag: dbit 1
-fahrenheit: dbit 1
+fahrenheit_flag: dbit 1
 
 $NOLIST
 $include(math32.inc)
@@ -277,7 +277,7 @@ check_decrement:
 	ljmp check_stime
 
 check_stime:
-	jb PB2, check_stemp
+	jb PB4, check_stemp
 	jb decrement1, Soak_time_decrement
 	mov a, Soak_time
 	add a, #0x01
@@ -293,7 +293,7 @@ Soak_time_decrement:
 	ljmp check_stemp
 
 check_stemp:
-	jb PB1, check_rtime
+	jb PB3, check_rtime
 	jb decrement1, Soak_temp_decrement
 	mov a, Soak_temp
 	add a, #0x01
@@ -349,7 +349,7 @@ decrement_s_hund:
     ljmp continue_dec_s
 
 check_rtime:
-	jb PB4, check_rtemp 
+	jb PB2, check_rtemp 
 	jb decrement1, Reflow_time_decrement
 	mov a, Reflow_time
 	add a, #0x01
@@ -365,7 +365,7 @@ Reflow_time_decrement:
 	ljmp check_rtemp
 
 check_rtemp:
-	jb PB3, skipp
+	jb PB1, skipp
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
@@ -550,15 +550,15 @@ Outside_tmp:
     mov z+1, x+1
     mov z+2, x+2
     mov z+3, x+3 
-	jnb fahrenheit, outside_temp_continue
+	;jnb fahrenheit_flag, outside_temp_continue
 
-fahrenheit_conversion:
-	load_y(9)
-	lcall mul32
-	load_y(5)
-	lcall div32 
-	load_y(32)
-	lcall add32
+;fahrenheit_conversion:
+;	load_y(9)
+;	lcall mul32
+;	load_y(5)
+;	lcall div32 
+;	load_y(32)
+;	lcall add32
 
 outside_temp_continue:
     lcall hex2bcd
@@ -620,29 +620,19 @@ oven_tmp:
     lcall add32
     lcall hex2bcd
 
-	Send_BCD(bcd+4)
-	Send_BCD(bcd+3)
-	Send_BCD(bcd+2)
-	Send_BCD(bcd+1)
-	Send_BCD(bcd+0)
-
-	mov DPTR, #String
-	clr A
-	movc A, @A+DPTR
-	lcall putchar
-	inc DPTR
+	lcall output_temp
 
     mov current_temp, bcd+2
     mov current_temp_hund, bcd+3
-    jnb fahrenheit, display_oven_tmp
-	lcall bcd2hex
-	load_y(9)
-	lcall mul32
-	load_y(5)
-	lcall div32 
-	load_y(32)
-	lcall add32   
-	lcall hex2bcd 
+    ;jnb fahrenheit_flag, display_oven_tmp
+	;lcall bcd2hex
+	;load_y(9)
+	;lcall mul32
+	;load_y(5)
+	;lcall div32 
+	;load_y(32)
+	;lcall add32   
+	;lcall hex2bcd 
 
 display_oven_tmp:
 	Set_Cursor(2,6)
@@ -654,6 +644,114 @@ display_oven_tmp:
 
 skipp1:
 	ret
+
+output_temp:
+	Send_BCD(bcd+2)
+    put_decimal:
+    jnb TI, put_decimal ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'.'
+	Send_BCD(bcd+1)
+	Send_BCD(bcd+0)
+    put_r:
+    jnb TI, put_r ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'\r'
+    put_n:
+    jnb TI, put_n ; Wait for transmission to complete
+    clr TI
+    mov SBUF, #'\n'
+	ret
+
+stage_temp:
+    anl ADCCON0, #0xF0
+    orl ADCCON0, #0x07 ; Select channel 7 
+
+    clr ADCF
+    setb ADCS
+    jnb ADCF, $
+
+    mov a, ADCRH
+    swap a
+    push acc
+    anl a, #0x0f
+    mov R1, a
+    pop acc
+    anl a, #0xf0
+    orl a, ADCRL
+    mov R0, A
+    
+    ; Convert to voltage
+	mov x+0, R0
+	mov x+1, R1
+	mov x+2, #0
+	mov x+3, #0
+	Load_y(50300) ; VCC voltage measured
+	lcall mul32
+	Load_y(4095) ; 2^12-1
+	lcall div32
+	Load_y(27300)
+	lcall sub32
+	load_y(100)
+	lcall mul32
+    ;save outside temp to z to later add onto the oven temp
+    mov z+0, x+0
+    mov z+1, x+1
+    mov z+2, x+2
+    mov z+3, x+3 
+
+	anl  ADCCON0, #0xF0  
+    orl  ADCCON0, #0x04  ; Select AIN4 (P0.5)
+
+    clr ADCF
+    setb ADCS
+    jnb ADCF, $
+
+    mov a, ADCRH
+    swap a
+    push acc
+    anl a, #0x0f
+    mov R1, a
+    pop acc
+    anl a, #0xf0
+    orl a, ADCRL
+    mov R0, A
+    
+    ; Convert to voltage
+	mov x+0, R0
+	mov x+1, R1
+	mov x+2, #0
+	mov x+3, #0
+    Load_y(50300) ; VCC voltage measured
+	lcall mul32
+	Load_y(4095) ; 2^12-1
+	lcall div32
+
+	;vout of opamp should now be in x
+    ;use formula vout=41uV/degC * R1/R2 --> degC = (vout*R2)/41*r1
+    ;first calculate vout*R2:
+    load_y(1469)
+    lcall mul32
+    ;now vout*R2 ohm is in x
+    ;next we will take 461 650V and divide
+    load_y(461650) 
+    lcall div32
+    ;multiply by 100k and then divide by 41 to cancel units
+    load_y(1000000)
+    lcall mul32
+    load_y(41)
+    lcall div32
+    ;move the outside temp to y and add
+    mov y+0, z+0
+    mov y+1, z+1
+    mov y+2, z+2
+    mov y+3, z+3
+    lcall add32
+    lcall hex2bcd
+
+	lcall output_temp
+	ret
+
 clearx:
 	mov x+0, #0x00
 	mov x+1, #0x00
@@ -665,7 +763,7 @@ check_temps:
 	mov a, current_temp 
 	subb a, Soak_temp ; subb sets carry flag if a borrow is needed (current_temp < soaktemp)
 	;soak temp is 10 for 100, current temp is 1 for 100 
-	jc skipp1 ; skip if current_temp < soak_temp (carry bit set)
+	jc skipp2 ; skip if current_temp < soak_temp (carry bit set)
 	mov a, current_temp_hund
 	cjne a, soak_temp_hund, next2 ; hundreds place moves relatively slowly so can we can just use cjne
 	mov STATE, #0x02
@@ -675,13 +773,13 @@ next2:
 check_currenttemp:
 	mov a, current_temp
 	subb a, #0x50
-	jc skipp1
+	jc skipp2
 	setb temp_flag ; set safety flag if temp >=60
 	ret
 
 safety_feature:
 	mov a, seconds
-	cjne a, #0x3C, skipp1 ; skip if current time is not 60
+	cjne a, #0x3C, skipp2 ; skip if current time is not 60
 	jb temp_flag, skipp2 ; skip if temperature checks passed
 	lcall display_blank
 	mov pwm, #0
@@ -754,13 +852,13 @@ reset_seconds:
 	;mov seconds, a
 ret
 
-check_convert: 
-	jb CONVERT, smjmp  ; if the 'Start' button is not pressed skip
-	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-	jb  CONVERT, smjmp  ; if the 'Start' button is not pressed skip
-	jnb CONVERT, $		; Wait for button release.  The '$' means: jump to same instruction.
-	cpl fahrenheit 
-	ret 
+;check_convert: 
+;	jb CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+;	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
+;	jb  CONVERT, smjmp  ; if the 'Start' button is not pressed skip
+;	jnb CONVERT, $		; Wait for button release.  The '$' means: jump to same instruction.
+;	cpl fahrenheit_flag 
+;	ret 
 
 fahrenheit_display:
 	set_cursor(2,13)
@@ -795,7 +893,7 @@ main:
     mov reflow_temp_100, #0x00
     clr decrement1
     clr s_flag 
-    clr fahrenheit
+    clr fahrenheit_flag
 	
 Forever:
 	lcall display_blank
@@ -846,14 +944,14 @@ state_1_loop:
 	cjne a, #1, state_2
 	lcall display_heating_s
 	mov pwm, #0
-	lcall check_convert
+	;lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_currenttemp
 	lcall safety_feature
 	lcall check_temps
-	jb fahrenheit, fahrenheit_display
-	jnb fahrenheit, celsius_display
+	;jb fahrenheit_flag, fahrenheit_display
+	;jnb fahrenheit_flag, celsius_display
 	mov R2, #250
 	lcall waitms
 	ljmp state_1_loop
@@ -880,6 +978,9 @@ state_2_loop:
 	lcall clearx
 	mov pwm, #80
 	lcall check_secs_s2
+	lcall stage_temp
+	mov R2, #250
+	lcall waitms
 	ljmp state_2_loop
 
 state_3:
@@ -913,12 +1014,12 @@ state_3_loop:
 	cjne a, #3, state_4
 	lcall display_heating_r
 	mov pwm, #0
-	lcall check_convert
+	;lcall check_convert
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temps_s3
-	jb fahrenheit, fahrenheit_display
-	jnb fahrenheit, celsius_display
+	;jb fahrenheit_flag, fahrenheit_display
+	;jnb fahrenheit_flag, celsius_display
 	mov R2, #250
 	lcall waitms
 	ljmp state_3_loop
@@ -944,6 +1045,9 @@ state_4_loop:
     lcall clearx
     mov pwm, #20
     lcall check_secs_s4
+	lcall stage_temp
+	mov R2, #250
+	lcall waitms
     ljmp state_4_loop
 
 state_5:
@@ -962,17 +1066,19 @@ state_5_loop:
 	lcall outside_tmp
 	lcall oven_tmp
 	lcall check_temp_s5
-	lcall check_convert
+	;lcall check_convert
 	mov R2, #250
 	lcall waitms
 	ljmp state_5_loop
 
 state_6:
 	lcall display_blank
+
+state_6_loop:
 	set_cursor(1,1)
 	send_constant_string(#done)
 	set_cursor(2,1)
 	send_constant_string(#ready)
-	ljmp state_6
+	ljmp state_6_loop
 
 END
