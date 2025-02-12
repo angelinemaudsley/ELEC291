@@ -307,7 +307,7 @@ check_stime:
 	da a
 	mov Soak_time, a
 	subb a, #0x60
-	jc display_up_stime ; skip if soak_time < 60
+	jc display_up_stime ;if soak_time < 60
 	mov a, Soak_time
 	subb a, #0x90
 	jc display_check_stime
@@ -325,9 +325,11 @@ Soak_time_decrement:
 	jc display_check_stime
 	ljmp display_down_stime
 
+check_stemp_intr:
+	ljmp check_stemp
+	
 display_up_stime:
 	writecommand(#0x40)
-
 	WriteData(#00000B)
 	WriteData(#00100B)
 	WriteData(#01110B)
@@ -336,27 +338,40 @@ display_up_stime:
 	WriteData(#00100B)
 	WriteData(#00100B)
 	WriteData(#00100B)
-	WriteCommand(#0x8A)
+	Set_cursor(1,6)
 	WriteData(#0)
 	ljmp check_stemp
 
+display_check_stime:
+	writecommand(#0x60)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00001B)
+	WriteData(#00001B)
+	WriteData(#10010B)
+	WriteData(#01010B)
+	WriteData(#00100B)
+	WriteData(#00000B)
+	Set_cursor(1,6)
+	WriteData(#4)
+	ljmp check_stemp
 
 display_down_stime:
-	WriteCommand(#0x8A)
-	WriteData(#1)
-	ljmp check_stemp
-
-check_stemp_intr:
-	ljmp check_stemp
-
-display_check_stime:
-	WriteCommand(#0x8A)
+	writecommand(#0x50)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#11111B)
+	WriteData(#01110B)
+	WriteData(#00100B)
+	Set_cursor(1,6)
 	WriteData(#2)
 	ljmp check_stemp
-	
 
 check_stemp:
-	jb PB3, check_rtime
+	jb PB3, check_rtime_intr
 	jb decrement1, Soak_temp_decrement
 	mov a, Soak_temp
 	add a, #0x01
@@ -367,17 +382,32 @@ check_stemp:
 
     cont_s:
     mov a, soak_temp_hund
-	cjne a, #0x20, fini
+	cjne a, #0x20, check_stemp_range_hund
     mov a, Soak_temp
-    cjne a, #0x50, check_rtime
+    cjne a, #0x50, check_stemp_range_hund
 	mov a, #0x00
 	mov Soak_temp, a
     mov a, soak_temp_hund
     mov a, #0x00
     mov soak_temp_hund, a
+	ljmp check_stemp_range_hund
 
-    fini:
-	ljmp check_rtime
+	check_stemp_range_hund:
+	mov a, Soak_temp_hund
+	subb a, #0x10
+	jc display_up_stemp
+	mov a, soak_temp_hund
+	subb a, #0x20
+	jc check_stemp_range
+	ljmp display_down_stemp_intr
+
+	check_stemp_range:
+	mov a, soak_temp
+	subb a, #0x30 
+	jc display_up_stemp
+	subb a, #0x70
+	jc display_check_stemp
+	ljmp display_down_stemp_intr
 
 add_hund_s:
     mov a, soak_temp_hund
@@ -392,43 +422,146 @@ Soak_temp_decrement:
 	add a, #0x99
 	da a
 	mov Soak_temp, a
-    cjne a, #0x00, check_rtime
+    cjne a, #0x00, check_stemp_range_hund
     ljmp decrement_s_hund   
 
     continue_dec_s:
     mov soak_temp_hund, #0x20
     mov soak_temp, #0x50
-    ljmp check_rtime
+    ljmp check_stemp_range_hund
 
     cont_s_dec:
     SUBB a, #0x10
     da A
     mov soak_temp_hund, a 
-	ljmp check_rtime
+	ljmp check_stemp_range_hund
 
 decrement_s_hund:
     mov a, soak_temp_hund
     cjne a , #0x00, cont_s_dec
     ljmp continue_dec_s
 
+check_rtime_intr:
+	ljmp check_rtime
+
+display_down_stemp_intr:
+	ljmp display_down_stemp
+
+display_up_stemp:
+	writecommand(#0x40)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#01110B)
+	WriteData(#11111B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	Set_cursor(1,10)
+	WriteData(#0)
+	ljmp check_rtime
+
+display_check_stemp:
+	writecommand(#0x60)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00001B)
+	WriteData(#00001B)
+	WriteData(#10010B)
+	WriteData(#01010B)
+	WriteData(#00100B)
+	WriteData(#00000B)
+	Set_cursor(1,10)
+	WriteData(#4)
+	ljmp check_rtime
+
+display_down_stemp:
+	writecommand(#0x50)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#11111B)
+	WriteData(#01110B)
+	WriteData(#00100B)
+	Set_cursor(1,10)
+	WriteData(#2)
+	ljmp check_rtime
+
 check_rtime:
-	jb PB2, check_rtemp 
+	jb PB2, check_rtemp_intr
 	jb decrement1, Reflow_time_decrement
 	mov a, Reflow_time
 	add a, #0x01
 	da a
 	mov Reflow_time, a
-	ljmp check_rtemp
+	subb a, #0x30
+	jc display_up_rtime ; skip if soak_time < 60
+	mov a, Reflow_time
+	subb a, #0x90
+	jc display_check_rtime
+	ljmp display_down_rtime 
 
 Reflow_time_decrement: 
 	mov a, Reflow_time
 	add a, #0x99
 	da a
 	mov Reflow_time, a
+	subb a, #0x30
+	jc display_up_rtime ; skip if soak_time < 60
+	mov a, Reflow_time
+	subb a, #0x90
+	jc display_check_rtime
+	ljmp display_down_rtime 
+
+display_up_rtime:
+	writecommand(#0x40)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#01110B)
+	WriteData(#11111B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	Set_cursor(2,8)
+	WriteData(#0)
+	ljmp check_rtemp
+
+check_rtemp_intr:
+	ljmp check_rtemp
+
+display_check_rtime:
+	writecommand(#0x60)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00001B)
+	WriteData(#00001B)
+	WriteData(#10010B)
+	WriteData(#01010B)
+	WriteData(#00100B)
+	WriteData(#00000B)
+	Set_cursor(2,8)
+	WriteData(#4)
+	ljmp check_rtemp
+
+display_down_rtime:
+	writecommand(#0x50)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#11111B)
+	WriteData(#01110B)
+	WriteData(#00100B)
+	Set_cursor(2,8)
+	WriteData(#2)
 	ljmp check_rtemp
 
 check_rtemp:
-	jb PB1, skipp
+	jb PB1, skipp_intr
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
 	add a, #0x01
@@ -440,16 +573,30 @@ check_rtemp:
     cont_r:
     ;check hundreds
     mov a, reflow_temp_100
-    cjne a, #0x20, cont_count ;make sure to check with 20 since the hundreds place value is multiplied by 10
+    cjne a, #0x20, check_rtemp_range_hund ;make sure to check with 20 since the hundreds place value is multiplied by 10
 	mov a, reflow_temp
-    cjne a, #0x50, skipp
+    cjne a, #0x50, check_rtemp_range_hund
     mov a, #0x00
     mov reflow_temp, a
     mov a, reflow_temp_100
     mov a, #0x00
 	mov Reflow_temp_100, a
-    cont_count:
-	ljmp skipp
+
+	check_rtemp_range_hund:
+	mov a, reflow_temp_100
+	subb a, #0x10
+	jc display_up_rtemp
+	subb a, #0x20
+	jc check_rtemp_range
+	ljmp display_down_rtemp
+
+	check_rtemp_range:
+	mov a, reflow_temp
+	subb a, #0x30 
+	jc display_up_rtemp
+	subb a, #0x70
+	jc display_down_rtemp_intr
+	ljmp display_check_rtemp
 
 add_hundreds_r:
     mov a, reflow_temp_100
@@ -465,7 +612,7 @@ Reflow_temp_decrement:
 	add a, #0x99
 	da a
 	mov Reflow_temp, a
-    cjne a, #0x00, skipp
+    cjne a, #0x00, check_rtemp_range_hund
     ljmp decrement_r_hund
 
     continue_dec_r:
@@ -473,18 +620,66 @@ Reflow_temp_decrement:
     ;cjne a, #0x00, skipp
     mov reflow_temp, #0x50
     mov reflow_temp_100, #0x20
-    ljmp skipp
+    ljmp check_rtemp_range_hund
 
     cont_dec:
     SUBB a, #0x10
     da a
     mov reflow_temp_100, a
-	ljmp skipp
+	ljmp check_rtemp_range_hund
 
     decrement_r_hund:
     mov a, reflow_temp_100
     cjne a, #0x00, cont_dec
     ljmp continue_dec_r
+
+display_down_rtemp_intr:
+	ljmp display_down_rtemp
+
+skipp_intr:
+	ljmp skipp
+
+display_up_rtemp:
+	writecommand(#0x40)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#01110B)
+	WriteData(#11111B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	Set_cursor(2,12)
+	WriteData(#0)
+	ljmp skipp
+
+display_check_rtemp:
+	writecommand(#0x60)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00001B)
+	WriteData(#00001B)
+	WriteData(#10010B)
+	WriteData(#01010B)
+	WriteData(#00100B)
+	WriteData(#00000B)
+	Set_cursor(2,12)
+	WriteData(#4)
+	ljmp skipp
+
+display_down_rtemp:
+	writecommand(#0x50)
+	WriteData(#00000B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#00100B)
+	WriteData(#11111B)
+	WriteData(#01110B)
+	WriteData(#00100B)
+	Set_cursor(2,12)
+	WriteData(#2)
+	ljmp skipp
 
 skipp:
 	ret
@@ -709,14 +904,12 @@ oven_tmp:
 
     jnb fahrenheit_flag, display_oven_tmp
 	lcall bcd2hex
-	load_y(90000)		; try using larger numbers
+	load_y(9)
 	lcall mul32
-	load_y(500)
+	load_y(5)
 	lcall div32 
-	load_y(3200)
-	lcall add32
-	load_y(100)
-	lcall div32
+	load_y(320000)
+	lcall add32 
 	lcall hex2bcd 
 	ljmp display_oven_tmp
 
@@ -818,7 +1011,7 @@ stage_temp:
     lcall add32
     lcall hex2bcd
 
-	send_bcd(bcd+3)
+	Send_BCD(bcd+3)
 	Send_BCD(bcd+2)
     put_decimal_1:
     jnb TI, put_decimal_1 ; Wait for transmission to complete
@@ -1219,6 +1412,11 @@ state_6:
     cpl TR0
 state_6_loop:
 	ljmp state_6_loop
+
+
+END
+	
+	
 
 
 END
