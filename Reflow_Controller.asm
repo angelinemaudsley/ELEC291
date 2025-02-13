@@ -1077,6 +1077,12 @@ safety_feature:
 	Send_Constant_String(#safety_message1)
 
 safety_feature_loop:
+	Set_Cursor(1,8)
+	display_char(#'!')
+	wait_milli_seconds(#500)
+	Set_Cursor(1,8)
+	display_char(#' ')
+	wait_milli_seconds(#500)
 	ljmp safety_feature_loop
 
 skipp2:
