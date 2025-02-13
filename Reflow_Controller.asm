@@ -715,15 +715,21 @@ Check_mute:
 	jb MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
 	jb mute_flag, muteset
 	setb mute_flag
-	set_cursor(1,16)
 	display_char(#'M')
 	jnb MUTE_BUTTON, $
 	ret
 muteset:
 	clr mute_flag
-	set_cursor(1,16)
 	display_char(#' ')
 	jnb MUTE_BUTTON, $
+	ret
+
+display_mute:
+	jb mute_flag, muted
+	display_char(#' ')
+	ret
+muted:
+	display_char(#'M')
 	ret
 
 smjmp:
@@ -1228,11 +1234,14 @@ state_0_loop:
 	lcall check_decrement
 	lcall display_menu
 	lcall Check_start
+	set_cursor(1,16)
 	lcall check_mute
 	ljmp state_0_loop
 
 state_1: 
 	lcall display_blank
+	set_cursor(2,16)
+	lcall display_mute
 	lcall check_mute
 	mov seconds, #0x00
 	Set_Cursor(1, 1)
@@ -1274,12 +1283,15 @@ state_1_loop:
 	lcall safety_feature
 	lcall check_temps
 	lcall check_fahrenheit
+	set_cursor(2,16)
 	lcall check_mute
 	wait_milli_seconds(#250)
 	ljmp state_1_loop
 
 state_2:
-	lcall display_blank 
+	lcall display_blank
+	set_cursor(2,16)
+	lcall display_mute
 	lcall check_mute
 	mov seconds, #0
 	Set_Cursor(1,1)
@@ -1307,6 +1319,7 @@ state_2_loop:
 	mov pwm, #80
 	lcall check_secs_s2
 	lcall stage_temp
+	set_cursor(2,16)
 	lcall check_mute
 	wait_milli_seconds(#250)
 	ljmp state_2_loop
@@ -1319,6 +1332,8 @@ state_3:
 	Send_Constant_String(#heating_to_r)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#heating_temp)
+	set_cursor(2, 16)
+	lcall display_mute
 	lcall check_mute
 	
 	Set_Cursor(1,4)
@@ -1353,6 +1368,7 @@ state_3_loop:
 	lcall oven_tmp
 	lcall check_temps_s3
 	lcall check_fahrenheit
+	set_cursor(2,16)
 	lcall check_mute
 	wait_milli_seconds(#250)
 	ljmp state_3_loop
@@ -1366,6 +1382,8 @@ state_4:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(reflow_time)
+	set_cursor(2,16)
+	lcall display_mute
 	lcall check_mute
 	jb mute_flag, state_4_loop
 	setb TR0
@@ -1385,6 +1403,7 @@ state_4_loop:
     mov pwm, #80
     lcall check_secs_s4
 	lcall stage_temp
+	set_cursor(2,16)
 	lcall check_mute
 	wait_milli_seconds(#250)
     ljmp state_4_loop
@@ -1395,6 +1414,8 @@ state_5:
     Send_Constant_String(#cooling)
     Set_Cursor(2,1)
     Send_Constant_String(#heating_temp)
+	set_cursor(2,16)
+	lcall display_mute
 	lcall check_mute
 	jb mute_flag, state_5_loop
 	setb TR0
@@ -1413,6 +1434,7 @@ state_5_loop:
 	lcall oven_tmp
 	lcall check_temp_s5
 	lcall check_fahrenheit
+	set_cursor(2,16)
 	lcall check_mute
 	wait_milli_seconds(#250)
 	ljmp state_5_loop
@@ -1423,6 +1445,8 @@ state_6:
 	send_constant_string(#done)
 	set_cursor(2,1)
 	send_constant_string(#ready)
+	set_cursor(2,16)
+	lcall display_mute
 	lcall check_mute
 	jb mute_flag, state_6_loop
 	cpl TR0
