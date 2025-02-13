@@ -37,16 +37,13 @@ with open(csv_filename, mode='w', newline='') as file:
 
 latest_temperature = None
 
-
-
-
 def data_gen():
     global paused
     global latest_temperature
     t = data_gen.t  
     while True:
         if paused:
-            time.sleep(0.1)  # Prevents high CPU usage while paused
+            yield t, ydata[-1] if ydata else 0  # Keep yielding last known temperature
             continue
         
         t += 1  
@@ -57,7 +54,6 @@ def data_gen():
             yield t, cool  
         except ValueError:
             print("Invalid temperature data received.")
-  
 
 def run(data):
     global latest_temperature
@@ -99,7 +95,6 @@ def run(data):
         
     return line,  
   
-
 # email configuration
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
@@ -186,13 +181,11 @@ def on_key(event):
         else:
             print("Resumed")
 
-fig.canvas.mpl_connect('key_press_event', on_key)
-
-
 data_gen.t = -1
 #aestheically pleasing stuff
 plt.style.use('dark_background')
 fig = plt.figure(figsize=(10, 6))
+fig.canvas.mpl_connect('key_press_event', on_key)
 fig.canvas.mpl_connect('close_event', on_close_figure)
 ax = fig.add_subplot(111)
 
@@ -239,5 +232,3 @@ def color(labels):
 radio.on_clicked(color)
 
 plt.show()
-
-
