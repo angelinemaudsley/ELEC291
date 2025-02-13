@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import Button, RadioButtons, CheckButtons
 import sys, time, math, threading
 import serial
 import pyttsx3
@@ -10,7 +11,7 @@ from datetime import datetime
 
 # Configure the serial port for data input
 ser = serial.Serial(
-    port='COM8',  # set to the correct COM port
+    port='COM13',  # set to the correct COM port
     baudrate=115200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_TWO,
@@ -157,6 +158,17 @@ text_box = ax.text(
 )
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
+
+# button that allows us to change the line colour
+axcolor = 'darkcyan'
+rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
+
+radio = RadioButtons(rax, ['cyan', 'red', 'lime'], activecolor='m')
+
+def color(labels):
+    line.set_color(labels)  # Change line color dynamically
+    fig.canvas.draw()
+radio.on_clicked(color)
 
 plt.show()
 
