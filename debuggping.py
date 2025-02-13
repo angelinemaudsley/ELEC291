@@ -190,7 +190,7 @@ fig.canvas.mpl_connect('close_event', on_close_figure)
 ax = fig.add_subplot(111)
 
 grid_color = '#444'
-line_color = '#00ffcc'
+line_color = 'cyan'
 text_color = '#ffffff'
 
 ax.set_facecolor("#121212")
@@ -222,8 +222,15 @@ ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repe
 
 #changes colour of line with button
 axcolor = 'darkcyan'
-rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
+ax_pos = ax.get_position().bounds  # (left, bottom, width, height)
 
+# Define rax position relative to ax
+rax_left = ax_pos[0] + 0.3 * ax_pos[2]  # Center the buttons under the graph
+rax_bottom = ax_pos[1] - 0.12  # Place below the graph
+rax_width = 0.4 * ax_pos[2]  # middle of graph
+rax_height = 0.08 
+
+rax = plt.axes([rax_left, rax_bottom, rax_width, rax_height], facecolor=axcolor)
 radio = RadioButtons(rax, ['cyan', 'red', 'lime'], activecolor='m')
 
 def color(labels):
