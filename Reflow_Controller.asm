@@ -518,7 +518,7 @@ Reflow_time_decrement:
 	subb a, #0x30
 	jc display_up_rtime ; skip if soak_time < 60
 	mov a, Reflow_time
-	subb a, #0x90
+	subb a, #0x91
 	jc display_check_rtime
 	ljmp display_down_rtime 
 
@@ -1090,7 +1090,7 @@ safety_feature:
 	cjne a, #0x3C, skipp2 ; skip if current time is not 60
 	jb temp_flag, skipp2 ; skip if temperature checks passed
 	lcall display_blank
-	mov pwm, #0
+	mov pwm, #100
 	Set_Cursor(1,1)
 	Send_Constant_String(#safety_message)
 	Set_Cursor(2,1)
