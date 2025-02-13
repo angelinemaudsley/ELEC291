@@ -1089,10 +1089,10 @@ safety_feature:
 safety_feature_loop:
 	Set_Cursor(1,8)
 	display_char(#'!')
-	wait_milli_seconds(#500)
+	wait_milli_seconds(#250)
 	Set_Cursor(1,8)
 	display_char(#' ')
-	wait_milli_seconds(#500)
+	wait_milli_seconds(#250)
 	ljmp safety_feature_loop
 
 skipp2:
