@@ -1186,7 +1186,7 @@ celsius_display:
 
 Save_Variables:
 	;lcall check_save_variables
-	lcall display_correct_save
+	;lcall display_correct_save
  	CLR EA  ; MUST disable interrupts for this to work!
  	MOV TA, #0aah ;CHPCON is TA protected
 	MOV TA, #55h
@@ -1383,7 +1383,7 @@ state_0_loop:
 	lcall display_menu
 	lcall Check_start
 	set_cursor(1,16)
-	lcall check_mute
+	;lcall check_mute
 	jb CONVERT, opas1
 	wait_milli_seconds(#50)
 	jb CONVERT, opas1
