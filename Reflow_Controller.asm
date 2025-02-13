@@ -59,7 +59,7 @@ time:db            'Time:xxs',0
 heating_to_r:db    'Tr:   C To:   C', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
-ready:db           'Ready to touch',0
+ready:db           'Ready to remove',0
 celsius:db         'C',0
 fahrenheit:db      'F',0
 low_1:db             'L',0
@@ -374,11 +374,14 @@ check_stemp:
 	jb PB3, check_rtime_intr
 	jb decrement1, Soak_temp_decrement
 	mov a, Soak_temp
+	cjne a, #0x99, continue_stemp
+	ljmp add_hund_s
+
+continue_stemp:
 	add a, #0x01
 	da a
 	mov Soak_temp, a
-    cjne a, #0x99, cont_s
-    ljmp add_hund_s
+    ljmp cont_s
 
     cont_s:
     mov a, soak_temp_hund
@@ -392,30 +395,33 @@ check_stemp:
     mov soak_temp_hund, a
 	ljmp check_stemp_range_hund
 
-	check_stemp_range_hund:
-	mov a, Soak_temp_hund
-	subb a, #0x10
-	jc display_up_stemp
-	mov a, soak_temp_hund
-	subb a, #0x20
-	jc check_stemp_range
-	ljmp display_down_stemp_intr
-
-	check_stemp_range:
-	mov a, soak_temp
-	subb a, #0x30 
-	jc display_up_stemp
-	subb a, #0x70
-	jc display_check_stemp
-	ljmp display_down_stemp_intr
-
 add_hund_s:
     mov a, soak_temp_hund
     add a, #0x10
     da A
     mov soak_temp_hund, A
     mov a, Soak_temp
+	mov a, #0x00
+	mov soak_temp, a
     ljmp cont_s
+
+check_stemp_range_hund:
+	mov a, Soak_temp_hund
+	subb a, #0x09
+	jc display_up_stemp
+	mov a, soak_temp_hund
+	subb a, #0x19
+	jc check_stemp_range
+	ljmp display_down_stemp_intr
+
+check_stemp_range:
+	mov a, soak_temp
+	subb a, #0x30 
+	jc display_up_stemp
+	mov a, soak_temp
+	subb a, #0x71
+	jc display_check_stemp
+	ljmp display_down_stemp_intr
 
 Soak_temp_decrement: 
 	mov a, Soak_temp
@@ -564,11 +570,14 @@ check_rtemp:
 	jb PB1, skipp_intr
 	jb decrement1, Reflow_temp_decrement
 	mov a, Reflow_temp
+	cjne a, #0x99, continue_rtemp
+	ljmp add_hundreds_r
+
+continue_rtemp:
 	add a, #0x01
     da a
     mov Reflow_temp, a
-	cjne a, #0x99, cont_r
-    ljmp add_hundreds_r
+    ljmp cont_r
 
     cont_r:
     ;check hundreds
@@ -584,19 +593,18 @@ check_rtemp:
 
 	check_rtemp_range_hund:
 	mov a, reflow_temp_100
-	subb a, #0x10
+	subb a, #0x19
 	jc display_up_rtemp
-	subb a, #0x20
-	jc check_rtemp_range
-	ljmp display_down_rtemp
+	ljmp check_rtemp_range
 
 	check_rtemp_range:
 	mov a, reflow_temp
-	subb a, #0x30 
+	subb a, #0x20
 	jc display_up_rtemp
-	subb a, #0x70
-	jc display_down_rtemp_intr
-	ljmp display_check_rtemp
+	mov a, reflow_temp
+	subb a, #0x41
+	jc display_check_rtemp
+	ljmp display_down_rtemp
 
 add_hundreds_r:
     mov a, reflow_temp_100
@@ -604,6 +612,8 @@ add_hundreds_r:
     da A
     mov reflow_temp_100, A
     mov a, Reflow_temp
+	mov a, #0x00
+	mov reflow_temp, a
     ljmp cont_r
 
 
@@ -1416,9 +1426,5 @@ state_6_loop:
 
 END
 	
-	
-
-
-END
 	
 	
