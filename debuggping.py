@@ -15,7 +15,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
-# Configure the serial port for data input
+# configuring the serial port for data input
 ser = serial.Serial(
     port='COM13',  # set to the correct COM port
     baudrate=115200,
@@ -24,16 +24,19 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS
 )
 
-xsize = 20  # Number of data points visible on the graph at a time
+xsize = 20  # this is the nuumber of data points visible on the graph at a time, changed to 20 to see more.
 csv_filename = "data_log.csv"
 
-print(f"CSV is saved at: {os.path.abspath(csv_filename)}")
+print(f"CSV is saved at: {os.path.abspath(csv_filename)}") #this shows were csv file is saved for debugging.
 
 with open(csv_filename, mode='w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"])
+    writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"]) #headers for csv file
 
 latest_temperature = None
+
+
+
 
 def data_gen():
     global latest_temperature
@@ -54,16 +57,18 @@ def run(data):
         if t > xsize:
             ax.set_xlim(t - xsize, t)
         
-        ax.set_ylim(min(ydata) - 5, max(ydata) + 5)
+        ax.set_ylim(min(ydata) - 5, max(ydata) + 5) #dynamically changes size of graph
         
         line.set_data(xdata, ydata)
 
-        mean_val = np.mean(ydata)
-        std_dev = np.std(ydata)
-        min_temp = min(ydata)
-        max_temp = max(ydata)
-        avg_temp = sum(ydata) / len(ydata)
+        mean_val = np.mean(ydata) #computs mean
+        std_dev = np.std(ydata) #standrad devation
+        min_temp = min(ydata) #min temp
+        max_temp = max(ydata) # max temp
+        avg_temp = sum(ydata) / len(ydata) # avergae temp
 
+
+        # textbox to displays all these values
         text_box.set_text(
             f"Mean: {mean_val:.2f}\n"
             f"Std Dev: {std_dev:.2f}\n"
@@ -79,12 +84,12 @@ def run(data):
         
     return line,  
 
-# Email Configuration
+# email configuration
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 EMAIL_ADDRESS = "elaminbrown@gmail.com"  
 EMAIL_PASSWORD = "xmcq ggpl dpmi evtx"  
-TO_EMAIL = "elaminbrown@gmail.com"  
+TO_EMAIL = "elaminbrown@gmail.com"  #change this if you want
 
 def send_email_with_csv():
     subject = "Reflow Oven Data Log"
@@ -116,11 +121,13 @@ def send_email_with_csv():
     except Exception as e:
         print(f"Error sending email: {e}")
 
+#sends email when closes figure.
 def on_close_figure(event):
     print("Reflow process complete. Sending data log email...")
     send_email_with_csv()
     sys.exit(0)
 
+#recognizes speech to give current temp.
 def recognize_speech():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
@@ -153,7 +160,7 @@ speech_thread = threading.Thread(target=recognize_speech, daemon=True)
 speech_thread.start()
 
 data_gen.t = -1
-
+#aestheically pleasing stuff
 plt.style.use('dark_background')
 fig = plt.figure(figsize=(10, 6))
 fig.canvas.mpl_connect('close_event', on_close_figure)
@@ -190,6 +197,7 @@ text_box = ax.text(
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
 
+#changes colour of line with button
 axcolor = 'darkcyan'
 rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
 
