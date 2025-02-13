@@ -1604,8 +1604,7 @@ state_6:
 	set_cursor(2,1)
 	send_constant_string(#ready)
 	set_cursor(2,16)
-	lcall display_mute
-	lcall check_mute
+	display_char(#' ')
 	jb mute_flag, state_6_loop
 	cpl TR0
     Wait_Milli_Seconds(#250)
