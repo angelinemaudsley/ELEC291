@@ -1074,7 +1074,10 @@ check_currenttemp:
 	jc skipp2
 	setb temp_flag ; set safety flag if temp >=60
 	ret
-
+	
+skipp2:
+	ret
+	
 safety_feature:
 	mov a, seconds
 	cjne a, #0x3C, skipp2 ; skip if current time is not 60
@@ -1089,14 +1092,13 @@ safety_feature:
 safety_feature_loop:
 	Set_Cursor(1,8)
 	display_char(#'!')
-	wait_milli_seconds(#500)
+	wait_milli_seconds(#250)
 	Set_Cursor(1,8)
 	display_char(#' ')
-	wait_milli_seconds(#500)
+	wait_milli_seconds(#250)
 	ljmp safety_feature_loop
 
-skipp2:
-	ret
+
 
 ; checks secs for state 2 -> 3
 check_secs_s2:
@@ -1109,11 +1111,14 @@ check_secs_s2:
 skip_check_secs_s2:
     ret
 
+skipp3:
+	ret
+
 ; checks temp for state 3 -> 4
 check_temps_s3:
 	mov a, current_temp 
 	subb a, Reflow_temp
-	jc skipp2
+	jc skipp3
 	mov a, current_temp_hund
 	cjne a, reflow_temp_100, nxt2
 	mov STATe, #0x04
@@ -1134,7 +1139,7 @@ skip_check_secs_s4:
 check_temp_s5:
     mov a, #0x60
 	subb a, current_temp
-	jc skipp2
+	jc skipp3
 	mov a, current_temp_hund
 	cjne a, #0, nx2
 	mov STATE, #0x00
