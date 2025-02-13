@@ -43,7 +43,8 @@ PWM_OUT equ P1.0 ;logic 1 = oven on
 CONVERT equ P1.6
 SOUND_OUT equ P1.2
 MUTE_BUTTON equ P3.0
-
+PAGE_ERASE_AP   EQU 00100010b
+BYTE_PROGRAM_AP EQU 00100001b
 
 ;                   1234567890123456    <- This helps determine the location of the counter
 soak_param: db     'Soak: xxs xxxC', 0
@@ -1190,6 +1191,147 @@ celsius_display:
 	send_constant_string(#celsius)
 	ret 
 
+Save_Variables:
+	;lcall check_save_variables
+	;lcall display_correct_save
+ 	CLR EA  ; MUST disable interrupts for this to work!
+ 	MOV TA, #0aah ;CHPCON is TA protected
+	MOV TA, #55h
+	ORL CHPCON, #00000001b ; IAPEN = 1, enable IAP mode
+	
+	MOV TA, #0aah ; IAPUEN is TA protected
+	MOV TA, #55h
+	ORL IAPUEN, #00000001b ; APUEN = 1, enable APROM update
+	
+	MOV IAPCN, #PAGE_ERASE_AP ; Erase page 3f80h~3f7Fh
+	MOV IAPAH, #3fh
+	MOV IAPAL, #80h
+	MOV IAPFD, #0FFh
+	MOV TA, #0aah ; IAPTRG is TA protected
+ 	MOV TA, #55h
+ 	ORL IAPTRG, #00000001b   ;write �1� to IAPGO to trigger IAP process
+	
+	MOV IAPCN, #BYTE_PROGRAM_AP
+	MOV IAPAH, #3fh
+	
+	;Load 3f80h with variable_1
+	MOV IAPAL, #80h
+	MOV IAPFD, Soak_temp
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG,#00000001b
+	
+	;Load 3f81h with variable_2
+	MOV IAPAL, #81h
+	MOV IAPFD, Reflow_temp
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG,#00000001b
+
+	;Load 3f82h with variable_3
+	MOV IAPAL, #82h
+	MOV IAPFD, Reflow_time
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG,#00000001b
+
+	;Load 3f83h with variable_4
+	MOV IAPAL, #83h
+	MOV IAPFD, Soak_time
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG,#00000001b
+
+	;Load 3f84h with Variable_5
+	MOV IAPAL,#84h
+	MOV IAPFD, Soak_temp_hund
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG, #00000001b
+
+	;Load 3f85h with Variable_6
+	MOV IAPAL,#85h
+	MOV IAPFD, Reflow_temp_100
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG, #00000001b
+
+	;Load 3f86h with 55h
+	MOV IAPAL,#86h
+	MOV IAPFD, #55h
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG, #00000001b
+
+	;Load 3f87h with aah
+	MOV IAPAL, #87h
+	MOV IAPFD, #0aah
+	MOV TA, #0aah
+	MOV TA, #55h
+	ORL IAPTRG, #00000001b
+
+	MOV TA, #0aah
+	MOV TA, #55h
+	ANL IAPUEN, #11111110b ; APUEN = 0, disable APROM update
+	MOV TA, #0aah
+	MOV TA, #55h
+	ANL CHPCON, #11111110b ; IAPEN = 0, disable IAP mode
+	
+	setb EA  ; Re-enable interrupts
+ret
+
+;; also initialize to a different push button so that we can load the memory values whenever
+Load_Variables:
+	;lcall display_correct_load
+	mov dptr, #0x3f86  ; First key value location.  Must be 0x55
+	clr a
+	movc a, @a+dptr
+	cjne a, #0x55, Load_Defaults
+	inc dptr      ; Second key value location.  Must be 0xaa
+	clr a
+	movc a, @a+dptr
+	cjne a, #0xaa, Load_Defaults
+	
+	mov dptr, #0x3f80
+	clr a
+	movc a, @a+dptr
+	mov Soak_temp, a
+	
+	inc dptr
+	clr a
+	movc a, @a+dptr
+	mov Reflow_temp, a
+	
+	inc dptr
+	clr a
+	movc a, @a+dptr
+	mov Reflow_time, a
+	
+	inc dptr
+	clr a
+	movc a, @a+dptr
+	mov Soak_time, a
+
+	inc dptr
+	clr a
+	movc a, @a+dptr
+	mov Soak_temp_hund, a
+	
+	inc dptr
+	clr a
+	movc a, @a+dptr
+	mov reflow_temp_100, a
+	ret
+
+Load_Defaults:
+	mov Soak_temp, #0
+	mov Reflow_temp, #0
+	mov Reflow_time, #45
+	mov soak_time, #90
+	mov soak_temp_hund, #0x10
+	mov Reflow_temp_100, #0x20
+ret
+
 main:
 	mov sp, #0x7f
 
@@ -1234,6 +1376,11 @@ state_0:
 	Send_Constant_String(#reflow_param)
 
 state_0_loop:
+	jb MUTE_BUTTON, opas
+	wait_milli_seconds(#50)
+	jb MUTE_BUTTON, opas
+	lcall Load_Variables
+	opas:
 	mov a, STATE
     mov pwm, #100
 	cjne a, #0, state_1
@@ -1242,7 +1389,11 @@ state_0_loop:
 	lcall display_menu
 	lcall Check_start
 	set_cursor(1,16)
-	lcall check_mute
+	jb CONVERT, opas1
+	wait_milli_seconds(#50)
+	jb CONVERT, opas1
+	lcall Save_Variables
+	opas1:
 	ljmp state_0_loop
 
 state_1: 
