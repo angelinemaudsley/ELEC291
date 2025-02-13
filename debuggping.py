@@ -14,6 +14,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import pygame
+import os
 
 # Configure the serial port for data input
 ser = serial.Serial(
@@ -36,16 +38,29 @@ with open(csv_filename, mode='w', newline='') as file:
 latest_temperature = None
 
 def data_gen():
+    global paused
     global latest_temperature
     t = data_gen.t  
     while True:
+        if paused:
+            time.sleep(0.1)  # Prevents high CPU usage while paused
+            continue
+        
         t += 1  
-        strin = ser.readline().decode('utf-8').strip()  
-        cool = float(strin)  
-        latest_temperature = cool  
-        yield t, cool  
+        try:
+            strin = ser.readline().decode('utf-8').strip()  
+            cool = float(strin)  
+            latest_temperature = cool  
+            yield t, cool  
+        except ValueError:
+            print("Invalid temperature data received.")
+  
 
 def run(data):
+    global latest_temperature
+    if paused:
+        return line,  # Stops graph updates
+
     t, y = data  
     if t > -1:  
         xdata.append(t)  
@@ -78,6 +93,7 @@ def run(data):
             writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
         
     return line,  
+  
 
 # Email Configuration
 SMTP_SERVER = "smtp.gmail.com"
@@ -151,6 +167,20 @@ def recognize_speech():
 
 speech_thread = threading.Thread(target=recognize_speech, daemon=True)
 speech_thread.start()
+
+# Pause/Resume functionality
+paused = False  
+def on_key(event):
+    global paused
+    if event.key == 'p':
+        paused = not paused
+        if paused:
+            print("Paused")
+        else:
+            print("Resumed")
+
+fig.canvas.mpl_connect('key_press_event', on_key)
+
 
 data_gen.t = -1
 
