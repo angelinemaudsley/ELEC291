@@ -55,7 +55,7 @@ safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp',0
 soaking:db         'Soaking time:', 0
 reflow:db          'Reflow Time:',0
-time:db            'Time:xxs',0
+time:db            'Time:  s',0
 heating_to_r:db    'Tr:   C To:   C', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
