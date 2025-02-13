@@ -55,11 +55,11 @@ safety_message:db  'ERROR: ', 0
 safety_message1:db  'Cant Read Temp',0
 soaking:db         'Soaking time:', 0
 reflow:db          'Reflow Time:',0
-time:db            'Time:xxs',0
+time:db            'Time:  s',0
 heating_to_r:db    'Tr:   C To:   C', 0
 cooling:db         'Cooling down...', 0
 done:db            'Done',0
-ready:db           'Ready to remove',0
+ready:db           'Pls Remove',0
 celsius:db         'C',0
 fahrenheit:db      'F',0
 low_1:db             'L',0
@@ -343,7 +343,7 @@ display_up_stime:
 	ljmp check_stemp
 
 display_check_stime:
-	writecommand(#0x60)
+	writecommand(#0x50)
 	WriteData(#00000B)
 	WriteData(#00000B)
 	WriteData(#00001B)
@@ -353,11 +353,11 @@ display_check_stime:
 	WriteData(#00100B)
 	WriteData(#00000B)
 	Set_cursor(1,6)
-	WriteData(#4)
+	WriteData(#2)
 	ljmp check_stemp
 
 display_down_stime:
-	writecommand(#0x50)
+	writecommand(#0x48)
 	WriteData(#00000B)
 	WriteData(#00100B)
 	WriteData(#00100B)
@@ -367,7 +367,7 @@ display_down_stime:
 	WriteData(#01110B)
 	WriteData(#00100B)
 	Set_cursor(1,6)
-	WriteData(#2)
+	WriteData(#1)
 	ljmp check_stemp
 
 check_stemp:
@@ -468,7 +468,7 @@ display_up_stemp:
 	ljmp check_rtime
 
 display_check_stemp:
-	writecommand(#0x60)
+	writecommand(#0x50)
 	WriteData(#00000B)
 	WriteData(#00000B)
 	WriteData(#00001B)
@@ -478,11 +478,11 @@ display_check_stemp:
 	WriteData(#00100B)
 	WriteData(#00000B)
 	Set_cursor(1,10)
-	WriteData(#4)
+	WriteData(#2)
 	ljmp check_rtime
 
 display_down_stemp:
-	writecommand(#0x50)
+	writecommand(#0x48)
 	WriteData(#00000B)
 	WriteData(#00100B)
 	WriteData(#00100B)
@@ -492,7 +492,7 @@ display_down_stemp:
 	WriteData(#01110B)
 	WriteData(#00100B)
 	Set_cursor(1,10)
-	WriteData(#2)
+	WriteData(#1)
 	ljmp check_rtime
 
 check_rtime:
@@ -539,7 +539,7 @@ check_rtemp_intr:
 	ljmp check_rtemp
 
 display_check_rtime:
-	writecommand(#0x60)
+	writecommand(#0x50)
 	WriteData(#00000B)
 	WriteData(#00000B)
 	WriteData(#00001B)
@@ -549,11 +549,11 @@ display_check_rtime:
 	WriteData(#00100B)
 	WriteData(#00000B)
 	Set_cursor(2,8)
-	WriteData(#4)
+	WriteData(#2)
 	ljmp check_rtemp
 
 display_down_rtime:
-	writecommand(#0x50)
+	writecommand(#0x48)
 	WriteData(#00000B)
 	WriteData(#00100B)
 	WriteData(#00100B)
@@ -563,7 +563,7 @@ display_down_rtime:
 	WriteData(#01110B)
 	WriteData(#00100B)
 	Set_cursor(2,8)
-	WriteData(#2)
+	WriteData(#1)
 	ljmp check_rtemp
 
 check_rtemp:
@@ -664,7 +664,7 @@ display_up_rtemp:
 	ljmp skipp
 
 display_check_rtemp:
-	writecommand(#0x60)
+	writecommand(#0x50)
 	WriteData(#00000B)
 	WriteData(#00000B)
 	WriteData(#00001B)
@@ -674,11 +674,11 @@ display_check_rtemp:
 	WriteData(#00100B)
 	WriteData(#00000B)
 	Set_cursor(2,12)
-	WriteData(#4)
+	WriteData(#2)
 	ljmp skipp
 
 display_down_rtemp:
-	writecommand(#0x50)
+	writecommand(#0x48)
 	WriteData(#00000B)
 	WriteData(#00100B)
 	WriteData(#00100B)
@@ -688,7 +688,7 @@ display_down_rtemp:
 	WriteData(#01110B)
 	WriteData(#00100B)
 	Set_cursor(2,12)
-	WriteData(#2)
+	WriteData(#1)
 	ljmp skipp
 
 skipp:
@@ -1465,11 +1465,77 @@ state_6:
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
     cpl TR0
+
 state_6_loop:
+	writecommand(#0x58)
+	WriteData(#01110B)
+	WriteData(#01001B)
+	WriteData(#01001B)
+	WriteData(#01001B)
+	WriteData(#01001B)
+	WriteData(#01001B)
+	WriteData(#01000B)
+	WriteData(#10000B)
+	Set_cursor(1,13)
+	WriteData(#3)
+
+	writecommand(#0x60)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#11110B)
+	WriteData(#00001B)
+	Set_cursor(1,14)
+	WriteData(#4)
+
+	writecommand(#0x68)
+	WriteData(#10000B)
+	WriteData(#10000B)
+	WriteData(#10000B)
+	WriteData(#10000B)
+	WriteData(#11000B)
+	WriteData(#00110B)
+	WriteData(#00001B)
+	WriteData(#00000B)
+	Set_cursor(2,13)
+	WriteData(#5)
+
+	writecommand(#0x70)
+	WriteData(#11110B)
+	WriteData(#00001B)
+	WriteData(#11110B)
+	WriteData(#00001B)
+	WriteData(#11110B)
+	WriteData(#00001B)
+	WriteData(#11110B)
+	WriteData(#00000B)
+	Set_cursor(2,14)
+	WriteData(#6)
+
+	wait_milli_seconds(#250)
+	wait_milli_seconds(#250)
+
+	writecommand(#0x78)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00000B)
+	WriteData(#00111B)
+	WriteData(#01000B)
+	WriteData(#10000B)
+	Set_cursor(1,13)
+	WriteData(#7)
+	
+
+	wait_milli_seconds(#250)
+	wait_milli_seconds(#250)
+
 	ljmp state_6_loop
 
-
 END
-	
 	
 	
