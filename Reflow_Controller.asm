@@ -702,8 +702,16 @@ check_convert:
 Check_mute:
 	jb MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
 	Wait_Milli_Seconds(#50)	; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-	jb  MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
-	cpl mute_flag
+	jb MUTE_BUTTON, smjmp  ; if the 'Start' button is not pressed skip
+	jb mute_flag, muteset
+	setb mute_flag
+	set_cursor(1,16)
+	display_char(#'M')
+	ret
+muteset:
+	clr mute_flag
+	set_cursor(1,16)
+	display_char(#' ')
 	ret
 
 smjmp:
@@ -1225,11 +1233,11 @@ state_1:
 	lcall div32
 	lcall hex2bcd
 	mov soak_temp_hund, bcd
-	jnb mute_flag, state_1_loop
-	cpl TR0
+	jb mute_flag, state_1_loop
+	setb TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
-    cpl TR0
+    clr TR0
 	
 state_1_loop:
 	mov a, STATE
@@ -1257,11 +1265,11 @@ state_2:
 	Send_Constant_String(#time)
 	Set_Cursor(1, 14)
 	display_BCD(soak_time)
-	jnb mute_flag, state_2_loop
-	cpl TR0
+	jb mute_flag, state_2_loop
+	setb TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
-    cpl TR0
+    clr TR0
 
 
 state_2_loop: 
@@ -1306,11 +1314,11 @@ state_3:
 	lcall div32
 	lcall hex2bcd
 	mov reflow_temp_100, bcd
-	jnb mute_flag, state_3_loop
-	cpl TR0
+	jb mute_flag, state_3_loop
+	setb TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
-    cpl TR0
+    clr TR0
 
 state_3_loop:
 	mov a, STATE
@@ -1336,11 +1344,11 @@ state_4:
 	Set_Cursor(1, 14)
 	display_BCD(reflow_time)
 	lcall check_mute
-	jnb mute_flag, state_4_loop
-	cpl TR0
+	jb mute_flag, state_4_loop
+	setb TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
-    cpl TR0
+    clr TR0
 
 state_4_loop:
     mov a, STATE
@@ -1365,11 +1373,11 @@ state_5:
     Set_Cursor(2,1)
     Send_Constant_String(#heating_temp)
 	lcall check_mute
-	jnb mute_flag, state_5_loop
-	cpl TR0
+	jb mute_flag, state_5_loop
+	setb TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
-    cpl TR0
+    clr TR0
     
 state_5_loop:
 	mov a, STATE
@@ -1393,7 +1401,7 @@ state_6:
 	set_cursor(2,1)
 	send_constant_string(#ready)
 	lcall check_mute
-	jnb mute_flag, state_6_loop
+	jb mute_flag, state_6_loop
 	cpl TR0
     Wait_Milli_Seconds(#250)
     wait_milli_seconds(#250)
