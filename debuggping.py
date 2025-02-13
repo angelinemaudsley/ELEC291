@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sys, time, math, threading
 import serial
+import pyttsx3
 import csv
 import speech_recognition as sr
 from datetime import datetime
@@ -86,6 +87,8 @@ def on_close_figure(event):
 def recognize_speech():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
+    engine = pyttsx3.init()  # Initialize the text-to-speech engine
+
     global latest_temperature
     while True:
         with mic as source:
@@ -96,9 +99,14 @@ def recognize_speech():
             command = recognizer.recognize_google(audio).lower()
             if "current temperature" in command:
                 if latest_temperature is not None:
-                    print(f"The current temperature is {latest_temperature:.2f}°C")
+                    response = f"The current temperature is {latest_temperature:.2f} degrees Celsius"
+                    print(response)
+                    engine.say(response)  # Speak the response
+                    engine.runAndWait()
                 else:
                     print("Temperature data is not yet available.")
+                    engine.say("Temperature data is not yet available.")
+                    engine.runAndWait()
         except sr.UnknownValueError:
             print("Could not understand audio.")
         except sr.RequestError:
