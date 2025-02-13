@@ -1,15 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.widgets import Button, RadioButtons, CheckButtons
+from matplotlib.widgets import RadioButtons
 import sys, time, math, threading
 import serial
 import pyttsx3
 import csv
 import speech_recognition as sr
 from datetime import datetime
+import smtplib
+import os
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
-# Configure the serial port for data input
+# configuring the serial port for data input
 ser = serial.Serial(
     port='COM13',  # set to the correct COM port
     baudrate=115200,
@@ -18,54 +24,51 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS
 )
 
-xsize = 20  # Number of data points visible on the graph at a time
-
-# Create a CSV file and write the header for data logging
+xsize = 20  # this is the nuumber of data points visible on the graph at a time, changed to 20 to see more.
 csv_filename = "data_log.csv"
-import os
-print(f"CSV is saved at: {os.path.abspath(csv_filename)}")
+
+print(f"CSV is saved at: {os.path.abspath(csv_filename)}") #this shows were csv file is saved for debugging.
 
 with open(csv_filename, mode='w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"])
+    writer.writerow(["Timestamp", "Time (s)", "Temperature (°C)", "Mean", "Std Dev", "Min", "Max", "Avg Temp"]) #headers for csv file
 
-# Global variable for latest temperature
 latest_temperature = None
+
+
+
 
 def data_gen():
     global latest_temperature
-    t = data_gen.t  # Initialize time counter
+    t = data_gen.t  
     while True:
-        t += 1  # Increment time counter
-        strin = ser.readline().decode('utf-8').strip()  # Read from serial, decode, and clean input
-        cool = float(strin)  # Convert string input to float
-        latest_temperature = cool  # Store latest temperature for speech response
-        yield t, cool  # Yield time index and temperature value
+        t += 1  
+        strin = ser.readline().decode('utf-8').strip()  
+        cool = float(strin)  
+        latest_temperature = cool  
+        yield t, cool  
 
 def run(data):
-    t, y = data  # Unpack time and temperature
-    if t > -1:  # Only processes valid time values
-        xdata.append(t)  # Store time data
-        ydata.append(y)  # Store temperature data
+    t, y = data  
+    if t > -1:  
+        xdata.append(t)  
+        ydata.append(y)  
 
-        # Adjust the x-axis limits to keep data scrolling
         if t > xsize:
             ax.set_xlim(t - xsize, t)
         
-        # Adjust the y-axis limits dynamically based on data range
-        ax.set_ylim(min(ydata) - 5, max(ydata) + 5)
+        ax.set_ylim(min(ydata) - 5, max(ydata) + 5) #dynamically changes size of graph
         
-        # Update the plotted line with new data
         line.set_data(xdata, ydata)
-        
-        # Compute real-time statistics
-        mean_val = np.mean(ydata)
-        std_dev = np.std(ydata)
-        min_temp = min(ydata)
-        max_temp = max(ydata)
-        avg_temp = sum(ydata) / len(ydata)
-        
-        # Update the text box with computed statistics
+
+        mean_val = np.mean(ydata) #computs mean
+        std_dev = np.std(ydata) #standrad devation
+        min_temp = min(ydata) #min temp
+        max_temp = max(ydata) # max temp
+        avg_temp = sum(ydata) / len(ydata) # avergae temp
+
+
+        # textbox to displays all these values
         text_box.set_text(
             f"Mean: {mean_val:.2f}\n"
             f"Std Dev: {std_dev:.2f}\n"
@@ -74,21 +77,61 @@ def run(data):
             f"Avg Temp: {avg_temp:.2f}"
         )
         
-        # Logging the data to the CSV file with timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
         
-    return line,  # Return the updated line object
+    return line,  
 
+# email configuration
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+EMAIL_ADDRESS = "elaminbrown@gmail.com"  
+EMAIL_PASSWORD = "xmcq ggpl dpmi evtx"  
+TO_EMAIL = "elaminbrown@gmail.com"  #change this if you want
+
+def send_email_with_csv():
+    subject = "Reflow Oven Data Log"
+    body = "Attached is the temperature log from the reflow oven session."
+
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_ADDRESS
+    msg["To"] = TO_EMAIL
+    msg["Subject"] = subject
+
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with open(csv_filename, "rb") as attachment:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(csv_filename)}")
+            msg.attach(part)
+
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_ADDRESS, TO_EMAIL, msg.as_string())
+        server.quit()
+
+        print(f"Email with CSV sent to {TO_EMAIL}")
+
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+#sends email when closes figure.
 def on_close_figure(event):
+    print("Reflow process complete. Sending data log email...")
+    send_email_with_csv()
     sys.exit(0)
 
+#recognizes speech to give current temp.
 def recognize_speech():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
-    engine = pyttsx3.init()  # Initialize the text-to-speech engine
+    engine = pyttsx3.init()  
 
     global latest_temperature
     while True:
@@ -102,7 +145,7 @@ def recognize_speech():
                 if latest_temperature is not None:
                     response = f"The current temperature is {latest_temperature:.2f} degrees Celsius"
                     print(response)
-                    engine.say(response)  # Speak the response
+                    engine.say(response)  
                     engine.runAndWait()
                 else:
                     print("Temperature data is not yet available.")
@@ -113,20 +156,16 @@ def recognize_speech():
         except sr.RequestError:
             print("Speech recognition service unavailable.")
 
-# Start speech recognition in a separate thread
 speech_thread = threading.Thread(target=recognize_speech, daemon=True)
 speech_thread.start()
 
-# Initialize time index for data generation
 data_gen.t = -1
-
-# Create the figure and subplot for graphing
+#aestheically pleasing stuff
 plt.style.use('dark_background')
 fig = plt.figure(figsize=(10, 6))
 fig.canvas.mpl_connect('close_event', on_close_figure)
 ax = fig.add_subplot(111)
 
-# Set futuristic styling
 grid_color = '#444'
 line_color = '#00ffcc'
 text_color = '#ffffff'
@@ -142,7 +181,6 @@ ax.yaxis.label.set_color(text_color)
 ax.tick_params(axis='x', colors=text_color)
 ax.tick_params(axis='y', colors=text_color)
 
-# Set axis labels
 ax.set_xlabel("Time (s)", fontsize=12, color=text_color)
 ax.set_ylabel("Temperature (°C)", fontsize=12, color=text_color)
 
@@ -159,16 +197,17 @@ text_box = ax.text(
 
 ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=100, repeat=False)
 
-# button that allows us to change the line colour
+#changes colour of line with button
 axcolor = 'darkcyan'
 rax = plt.axes([0.05, 0.4, 0.15, 0.15], facecolor=axcolor)
 
 radio = RadioButtons(rax, ['cyan', 'red', 'lime'], activecolor='m')
 
 def color(labels):
-    line.set_color(labels)  # Change line color dynamically
+    line.set_color(labels)  
     fig.canvas.draw()
 radio.on_clicked(color)
 
 plt.show()
+
 
