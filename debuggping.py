@@ -65,21 +65,17 @@ def run(data):
         xdata.append(t)  
         ydata.append(y)  
 
-        if t > xsize:
-            ax.set_xlim(t - xsize, t)
-        
-        ax.set_ylim(min(ydata) - 5, max(ydata) + 5) #dynamically changes size of graph
-        
+        ax.set_xlim(0, t)  # Scale x-axis from 0 to latest time
+        ax.set_ylim(min(ydata) - 5, max(ydata) + 5)  # Dynamically scale y-axis
+
         line.set_data(xdata, ydata)
 
-        mean_val = np.mean(ydata) #computs mean
-        std_dev = np.std(ydata) #standrad devation
-        min_temp = min(ydata) #min temp
-        max_temp = max(ydata) # max temp
-        avg_temp = sum(ydata) / len(ydata) # avergae temp
+        mean_val = np.mean(ydata)
+        std_dev = np.std(ydata)
+        min_temp = min(ydata)
+        max_temp = max(ydata)
+        avg_temp = sum(ydata) / len(ydata)
 
-
-        # textbox to displays all these values
         text_box.set_text(
             f"Mean: {mean_val:.2f}\n"
             f"Std Dev: {std_dev:.2f}\n"
@@ -87,13 +83,13 @@ def run(data):
             f"Max: {max_temp:.2f}\n"
             f"Avg Temp: {avg_temp:.2f}"
         )
-        
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, t, y, mean_val, std_dev, min_temp, max_temp, avg_temp])
         
-    return line,  
+    return line,    
   
 # email configuration
 SMTP_SERVER = "smtp.gmail.com"
