@@ -296,29 +296,8 @@ LCD_PB_Done:
 
 check_decrement: 
 	jb PB0, check_stime
-
-	jb decrement1, decrement_set
-	setb decrement1
-	
-	writecommand(#0x40)
-	WriteData(#00000B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#00100B)
-	WriteData(#11111B)
-	WriteData(#01110B)
-	WriteData(#00100B)
-	Set_cursor(1,15)
-	WriteData(#0)
-	;jb PB0, $
-
-	jmp check_stime
-decrement_set:
-	clr decrement1
-	set_cursor(1,15)
-	display_char(#' ')
-	;jb PB0, $
+	cpl decrement1
+	ljmp check_stime
 
 check_stime:
 	jb PB4, check_stemp_intr
@@ -734,6 +713,7 @@ muteset:
 	clr mute_flag
 	set_cursor(1,16)
 	display_char(#' ')
+	jnb MUTE_BUTTON, $
 	ret
 
 smjmp:
