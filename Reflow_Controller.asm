@@ -309,7 +309,7 @@ check_stime:
 	subb a, #0x60
 	jc display_up_stime ;if soak_time < 60
 	mov a, Soak_time
-	subb a, #0x90
+	subb a, #0x91
 	jc display_check_stime
 	ljmp display_down_stime 
 
@@ -321,7 +321,7 @@ Soak_time_decrement:
 	subb a, #0x60
 	jc display_up_stime ; skip if soak_time < 60
 	mov a, Soak_time
-	subb a, #0x90
+	subb a, #0x91
 	jc display_check_stime
 	ljmp display_down_stime
 
@@ -505,7 +505,7 @@ check_rtime:
 	subb a, #0x30
 	jc display_up_rtime ; skip if soak_time < 60
 	mov a, Reflow_time
-	subb a, #0x90
+	subb a, #0x61
 	jc display_check_rtime
 	ljmp display_down_rtime 
 
@@ -517,7 +517,7 @@ Reflow_time_decrement:
 	subb a, #0x30
 	jc display_up_rtime ; skip if soak_time < 60
 	mov a, Reflow_time
-	subb a, #0x90
+	subb a, #0x61
 	jc display_check_rtime
 	ljmp display_down_rtime 
 
@@ -1076,6 +1076,10 @@ next2:
 
 check_currenttemp:
 	mov a, current_temp
+	mov bcd+0, #0x00
+	mov bcd+1, #0x00
+	mov bcd+2, #0x00
+	mov bcd+3, #0x00
 	mov bcd, a
 	lcall bcd2hex
 	mov a, x
