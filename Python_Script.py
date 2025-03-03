@@ -15,7 +15,6 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import pygame
-import os
 
 # configuring the serial port for data input
 ser = serial.Serial(
