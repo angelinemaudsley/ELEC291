@@ -1,4 +1,4 @@
-; N76E003 LCD_Pushbuttons.asm: Reads muxed push buttons using one input
+; N76E003 Reflow_Controller.asm
 
 $NOLIST
 $MODN76E003
